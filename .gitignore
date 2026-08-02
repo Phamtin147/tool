@@ -1,0 +1,21 @@
+# Secrets
+**/.config/gemini.env
+**/gemini.env
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Temp/test files
+a.txt
+dapan.txt
+dapan_EN.txt
+
+# OS
+.DS_Store
+Thumbs.db
