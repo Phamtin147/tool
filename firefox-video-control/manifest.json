@@ -1,0 +1,110 @@
+{
+  "manifest_version": 3,
+  "name": "LevelUp Video Control",
+  "version": "1.0.0",
+  "description": "Manual video controls for levelup.akajob.io: play/pause, seek, speed control, and optional tab switch after a video really ends.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://levelup.akajob.io/*"
+  ],
+  "background": {
+    "scripts": [
+      "service-worker.js"
+    ]
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "128": "icon.png"
+    }
+  },
+  "icons": {
+    "128": "icon.png"
+  },
+  "commands": {
+    "toggle-play": {
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
+      "description": "Play or pause the active video"
+    },
+    "seek-backward": {
+      "suggested_key": {
+        "default": "Alt+Shift+Left"
+      },
+      "description": "Seek active video backward 10 seconds"
+    },
+    "seek-forward": {
+      "suggested_key": {
+        "default": "Alt+Shift+Right"
+      },
+      "description": "Seek active video forward 10 seconds"
+    },
+    "speed-up": {
+      "suggested_key": {
+        "default": "Alt+Shift+Up"
+      },
+      "description": "Increase active video playback speed"
+    },
+    "skip-video": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Skip the active video and switch to the next tab"
+    },
+    "speed-down": {
+      "suggested_key": {
+        "default": "Alt+Shift+Down"
+      },
+      "description": "Decrease active video playback speed"
+    },
+    "reset-speed": {
+      "suggested_key": {
+        "default": "Alt+Shift+R"
+      },
+      "description": "Reset active video playback speed to 1x"
+    },
+    "toggle-auto-next": {
+      "suggested_key": {
+        "default": "Alt+Shift+N"
+      },
+      "description": "Toggle switching to next tab after the active video ends"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://levelup.akajob.io/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icon.png"
+      ],
+      "matches": [
+        "https://levelup.akajob.io/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "levelup-video-control@local.tool",
+      "strict_min_version": "109.0"
+    }
+  }
+}

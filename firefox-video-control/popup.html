@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual Video Controller</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <h1>Video Control</h1>
+    <p class="hint">Điều khiển video thủ công trên tab hiện tại.</p>
+
+    <section class="grid" aria-label="Video controls">
+      <button data-command="toggle-play">Play / Pause</button>
+      <button data-command="seek-backward">-10s</button>
+      <button data-command="seek-forward">+10s</button>
+      <button data-command="skip-video">Skip Video</button>
+      <button data-command="speed-down">Speed -</button>
+      <button data-command="speed-up">Speed +</button>
+      <button data-command="reset-speed">1x</button>
+    </section>
+
+    <label class="toggle">
+      <input id="auto-next" type="checkbox">
+      <span>Tự chuyển tab khi video kết thúc thật</span>
+    </label>
+
+    <p id="status" role="status"></p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
