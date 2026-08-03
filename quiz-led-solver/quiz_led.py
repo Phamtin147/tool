@@ -28,13 +28,15 @@ import requests
 SCREENSHOT_DIR = Path("/home/amtia/Pictures/screenshots")
 CONFIG_ENV = Path(__file__).resolve().parent / ".config" / "gemini.env"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
-ANSWER_RE = re.compile(r"\b([A-F])\b", re.IGNORECASE)
+ANSWER_RE = re.compile(r"[A-Z]", re.IGNORECASE)
 CAPS_LOCK_KEYCODE = 58
 
-PROMPT = """You are solving a multiple-choice question from a screenshot.
-Find the correct answer option.
-Respond with exactly ONE uppercase letter from A, B, C, D, E, F.
-Do not explain. Do not include punctuation. If unsure, choose the most likely option.
+PROMPT = """You are solving a multiple-choice or multiple-select quiz question from a screenshot.
+Carefully identify the OUTER answer choices/labels (e.g. A, B, C, D, E, F...) and determine which outer choice label(s) correspond to the correct option(s).
+Do NOT confuse inner statement letters (e.g. A. Sao Thủy, B. Sao Kim...) with the outer answer choices (e.g. A. D, B. A, C. B...). Always select the OUTER answer choice letter(s) that point to the correct answer.
+
+Respond ONLY with the uppercase outer answer choice letter(s) (e.g., A, B, C, D, A B, etc.).
+Sort the letters alphabetically with no spaces, explanations, or punctuation (e.g. "A", "AC", "ABD").
 """.strip()
 
 
@@ -69,19 +71,16 @@ def image_to_base64(path: Path) -> str:
 
 
 def parse_answer(text: str) -> str:
-    clean = text.strip().upper()
-    if clean in {"A", "B", "C", "D", "E", "F"}:
-        return clean
+    # Remove common words to prevent matching letters inside words like "AND", "OR", "CHOICE"
+    cleaned_text = re.sub(r"\b(AND|OR|OPTION|OPTIONS|CHOICE|CHOICES|IS|ARE|CORRECT)\b", " ", text, flags=re.IGNORECASE)
+    matches = ANSWER_RE.findall(cleaned_text)
+    if not matches:
+        matches = ANSWER_RE.findall(text)
+    if not matches:
+        raise ValueError(f"Could not parse A-Z answer from: {text!r}")
 
-    match = ANSWER_RE.search(clean)
-    if match:
-        return match.group(1).upper()
-
-    compact = re.sub(r"[^A-F]", "", clean)
-    if compact:
-        return compact[0]
-
-    raise ValueError(f"Could not parse A-F answer from: {text!r}")
+    unique_sorted = sorted(set(letter.upper() for letter in matches))
+    return "".join(unique_sorted)
 
 
 def mime_type(path: Path) -> str:
@@ -151,7 +150,7 @@ def ask_ollama(path: Path, model: str, timeout: float) -> str:
         "stream": False,
         "options": {
             "temperature": 0,
-            "num_predict": 4,
+            "num_predict": 16,
         },
     }
     response = requests.post(f"{host}/api/generate", json=payload, timeout=timeout)
@@ -194,8 +193,8 @@ def solve(path: Path, provider: str, gemini_models: list[str], ollama_model: str
     raise RuntimeError("All providers failed:\n" + "\n".join(errors))
 
 
-def blink_count(answer: str) -> int:
-    return (ord(answer) - ord("A") + 1) * 2
+def blink_count(letter: str) -> int:
+    return (ord(letter) - ord("A") + 1) * 2
 
 
 def run_ydotool_key(keycode: int) -> None:
@@ -208,22 +207,28 @@ def run_ydotool_key(keycode: int) -> None:
     )
 
 
-def blink_caps(answer: str, interval: float, dry_run: bool) -> None:
-    count = blink_count(answer)
-    print(f"[led] answer={answer} -> Caps Lock key events={count}", file=sys.stderr)
-    if dry_run:
-        return
+def blink_caps(answer: str, interval: float, group_interval: float, dry_run: bool) -> None:
+    letters = list(answer)
+    print(f"[led] answer={answer} -> letters={letters!r}", file=sys.stderr)
 
-    for index in range(count):
-        try:
-            run_ydotool_key(CAPS_LOCK_KEYCODE)
-        except subprocess.CalledProcessError as exc:
-            raise RuntimeError(
-                "ydotool failed. Make sure ydotoold is running and socket is accessible. "
-                f"stderr={exc.stderr.strip()!r}"
-            ) from exc
-        print(f"[led] blink {index + 1}/{count}", file=sys.stderr)
-        time.sleep(interval)
+    for idx, letter in enumerate(letters):
+        count = blink_count(letter)
+        if dry_run:
+            print(f"[led] (dry-run) letter {letter}: Caps Lock key events={count}", file=sys.stderr)
+        else:
+            for index in range(count):
+                try:
+                    run_ydotool_key(CAPS_LOCK_KEYCODE)
+                except subprocess.CalledProcessError as exc:
+                    raise RuntimeError(
+                        "ydotool failed. Make sure ydotoold is running and socket is accessible. "
+                        f"stderr={exc.stderr.strip()!r}"
+                    ) from exc
+                print(f"[led] letter {letter} blink {index + 1}/{count}", file=sys.stderr)
+                time.sleep(interval)
+
+        if idx < len(letters) - 1 and group_interval > 0:
+            time.sleep(group_interval)
 
 
 def wait_for_stable_file(path: Path, checks: int = 3, delay: float = 0.2) -> None:
@@ -245,7 +250,7 @@ def process_image(image: Path, args: argparse.Namespace) -> bool:
         print(f"[image] {image}", file=sys.stderr)
         answer, used_provider = solve(image, args.provider, args.gemini_models, args.ollama_model, args.timeout)
         print(f"[answer] {answer} via {used_provider}")
-        blink_caps(answer, args.interval, args.dry_run)
+        blink_caps(answer, args.interval, args.group_interval, args.dry_run)
         return True
     except Exception as exc:  # noqa: BLE001 - CLI entry point
         print(f"[error] {exc}", file=sys.stderr)
@@ -286,6 +291,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
     parser.add_argument("--timeout", type=float, default=20.0)
     parser.add_argument("--interval", type=float, default=0.22, help="Delay between Caps Lock key events")
+    parser.add_argument("--group-interval", type=float, default=1.0, help="Delay between multiple answer letters")
     parser.add_argument("--dry-run", action="store_true", help="Do not blink LED")
     parser.add_argument("--watch", action="store_true", help="Watch screenshot folder and solve every new image")
     parser.add_argument("--poll", type=float, default=0.5, help="Watch polling interval in seconds")
