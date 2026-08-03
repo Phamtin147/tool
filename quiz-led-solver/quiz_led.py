@@ -169,19 +169,27 @@ def provider_order(provider: str) -> list[str]:
     return [provider]
 
 
-def solve(path: Path, provider: str, gemini_model: str, ollama_model: str, timeout: float) -> tuple[str, str]:
+def solve(path: Path, provider: str, gemini_models: list[str], ollama_model: str, timeout: float) -> tuple[str, str]:
     errors: list[str] = []
     for name in provider_order(provider):
-        try:
-            print(f"[ai] trying {name}...", file=sys.stderr)
-            if name == "gemini":
-                return ask_gemini(path, gemini_model, timeout), name
-            if name == "ollama":
-                return ask_ollama(path, ollama_model, timeout), name
-            raise ValueError(f"Unknown provider: {name}")
-        except Exception as exc:  # noqa: BLE001 - CLI should show all provider failures
-            errors.append(f"{name}: {exc}")
-            print(f"[ai] {name} failed: {exc}", file=sys.stderr)
+        if name == "gemini":
+            for model in gemini_models:
+                try:
+                    print(f"[ai] trying gemini:{model}...", file=sys.stderr)
+                    return ask_gemini(path, model, timeout), f"gemini:{model}"
+                except Exception as exc:  # noqa: BLE001 - CLI should show all model failures
+                    errors.append(f"gemini:{model}: {exc}")
+                    print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
+            continue
+        if name == "ollama":
+            try:
+                print(f"[ai] trying ollama...", file=sys.stderr)
+                return ask_ollama(path, ollama_model, timeout), "ollama"
+            except Exception as exc:  # noqa: BLE001 - CLI should show all provider failures
+                errors.append(f"ollama: {exc}")
+                print(f"[ai] ollama failed: {exc}", file=sys.stderr)
+            continue
+        raise ValueError(f"Unknown provider: {name}")
 
     raise RuntimeError("All providers failed:\n" + "\n".join(errors))
 
@@ -235,7 +243,7 @@ def process_image(image: Path, args: argparse.Namespace) -> bool:
     try:
         wait_for_stable_file(image)
         print(f"[image] {image}", file=sys.stderr)
-        answer, used_provider = solve(image, args.provider, args.gemini_model, args.ollama_model, args.timeout)
+        answer, used_provider = solve(image, args.provider, args.gemini_models, args.ollama_model, args.timeout)
         print(f"[answer] {answer} via {used_provider}")
         blink_caps(answer, args.interval, args.dry_run)
         return True
@@ -274,7 +282,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--dir", type=Path, default=SCREENSHOT_DIR, help="Screenshot directory")
     parser.add_argument("--image", type=Path, help="Specific image file. Defaults to newest image in --dir")
     parser.add_argument("--provider", choices=["auto", "gemini", "ollama"], default="auto")
-    parser.add_argument("--gemini-model", default=os.environ.get("GEMINI_MODEL", "gemini-3.5-flash"))
+    parser.add_argument("--gemini-model", action="append", help="Gemini model in fallback order (repeatable). Default: gemini-3.6-flash, gemini-3.5-flash, gemini-3.1-flash-lite")
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
     parser.add_argument("--timeout", type=float, default=20.0)
     parser.add_argument("--interval", type=float, default=0.22, help="Delay between Caps Lock key events")
@@ -283,6 +291,13 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--poll", type=float, default=0.5, help="Watch polling interval in seconds")
     parser.add_argument("--process-existing", action="store_true", help="In watch mode, process current newest image immediately")
     args = parser.parse_args(argv)
+
+    gemini_models = args.gemini_model or [
+        os.environ.get("GEMINI_MODEL_1", "gemini-3.6-flash"),
+        os.environ.get("GEMINI_MODEL_2", "gemini-3.5-flash"),
+        os.environ.get("GEMINI_MODEL_3", "gemini-3.1-flash-lite"),
+    ]
+    args.gemini_models = gemini_models
 
     if args.watch:
         try:
