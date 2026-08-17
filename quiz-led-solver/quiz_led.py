@@ -195,11 +195,12 @@ def solve(
                     file=sys.stderr,
                 )
                 t_start = time.time()
-                with ThreadPoolExecutor(max_workers=len(gemini_models)) as executor:
-                    futures = {
-                        executor.submit(ask_gemini, path, model, timeout): model
-                        for model in gemini_models
-                    }
+                executor = ThreadPoolExecutor(max_workers=len(gemini_models))
+                futures = {
+                    executor.submit(ask_gemini, path, model, timeout): model
+                    for model in gemini_models
+                }
+                try:
                     for future in as_completed(futures):
                         model = futures[future]
                         try:
@@ -209,10 +210,13 @@ def solve(
                                 f"[ai] fastest response from gemini:{model} in {dt:.2f}s -> answer {ans}",
                                 file=sys.stderr,
                             )
+                            executor.shutdown(wait=False, cancel_futures=True)
                             return ans, f"gemini:{model}"
                         except Exception as exc:  # noqa: BLE001 - CLI should show all model failures
                             errors.append(f"gemini:{model}: {exc}")
                             print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
+                finally:
+                    executor.shutdown(wait=False, cancel_futures=True)
             else:
                 for model in gemini_models:
                     try:
@@ -341,7 +345,7 @@ def blink_caps(
             time.sleep(group_interval)
 
 
-def wait_for_stable_file(path: Path, checks: int = 3, delay: float = 0.2) -> None:
+def wait_for_stable_file(path: Path, checks: int = 2, delay: float = 0.1) -> None:
     previous_size = -1
     stable_count = 0
     while stable_count < checks:
