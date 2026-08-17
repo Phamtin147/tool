@@ -206,9 +206,43 @@ def blink_count(letter: str) -> int:
     return (ord(letter) - ord("A") + 1) * 2
 
 
+def is_caps_on() -> bool:
+    """Check if any Caps Lock LED is currently active in sysfs."""
+    import glob
+    for p in glob.glob("/sys/class/leds/*::capslock/brightness"):
+        try:
+            with open(p) as f:
+                if int(f.read().strip()) > 0:
+                    return True
+        except Exception:
+            pass
+    return False
+
+
+def find_capslock_leds() -> list[str]:
+    """Find all hardware Caps Lock LED device names."""
+    import glob
+    led_paths = glob.glob("/sys/class/leds/*::capslock")
+    return [Path(p).name for p in led_paths]
+
+
+def set_led_brightness(devices: list[str], brightness: int) -> bool:
+    """Set brightness on all Caps Lock LED devices using brightnessctl."""
+    success = False
+    for dev in devices:
+        res = subprocess.run(
+            ["brightnessctl", f"--device={dev}", "set", str(brightness)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if res.returncode == 0:
+            success = True
+    return success
+
+
 def run_ydotool_key(keycode: int) -> None:
     subprocess.run(
-        ["ydotool", "key", f"{keycode}:1", f"{keycode}:0"],
+        ["ydotool", "key", "-d", "60", f"{keycode}:1", f"{keycode}:0"],
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -216,25 +250,59 @@ def run_ydotool_key(keycode: int) -> None:
     )
 
 
-def blink_caps(answer: str, interval: float, group_interval: float, dry_run: bool) -> None:
+def ensure_caps_off(led_devices: list[str]) -> None:
+    """Ensure Caps Lock is in OFF state before/after blinking."""
+    if is_caps_on():
+        try:
+            run_ydotool_key(CAPS_LOCK_KEYCODE)
+            time.sleep(0.05)
+        except Exception:
+            pass
+    if led_devices:
+        set_led_brightness(led_devices, 0)
+
+
+def blink_caps(
+    answer: str,
+    interval: float,
+    group_interval: float,
+    dry_run: bool,
+    backend: str = "auto",
+) -> None:
     letters = list(answer)
     print(f"[led] answer={answer} -> letters={letters!r}", file=sys.stderr)
+
+    led_devices = find_capslock_leds() if backend in ("auto", "brightnessctl") else []
 
     for idx, letter in enumerate(letters):
         count = blink_count(letter)
         if dry_run:
-            print(f"[led] (dry-run) letter {letter}: Caps Lock key events={count}", file=sys.stderr)
+            print(f"[led] (dry-run) letter {letter}: Caps Lock blink count={count}", file=sys.stderr)
         else:
+            ensure_caps_off(led_devices)
+            time.sleep(0.05)
             for index in range(count):
+                # Turn ON
                 try:
                     run_ydotool_key(CAPS_LOCK_KEYCODE)
-                except subprocess.CalledProcessError as exc:
-                    raise RuntimeError(
-                        "ydotool failed. Make sure ydotoold is running and socket is accessible. "
-                        f"stderr={exc.stderr.strip()!r}"
-                    ) from exc
-                print(f"[led] letter {letter} blink {index + 1}/{count}", file=sys.stderr)
+                except Exception:
+                    pass
+                if led_devices:
+                    set_led_brightness(led_devices, 1)
+                print(f"[led] letter {letter} blink {index + 1}/{count} (ON)", file=sys.stderr)
                 time.sleep(interval)
+
+                # Turn OFF
+                try:
+                    run_ydotool_key(CAPS_LOCK_KEYCODE)
+                except Exception:
+                    pass
+                if led_devices:
+                    set_led_brightness(led_devices, 0)
+                print(f"[led] letter {letter} blink {index + 1}/{count} (OFF)", file=sys.stderr)
+                time.sleep(interval)
+
+            ensure_caps_off(led_devices)
 
         if idx < len(letters) - 1 and group_interval > 0:
             time.sleep(group_interval)
@@ -259,7 +327,7 @@ def process_image(image: Path, args: argparse.Namespace) -> bool:
         print(f"[image] {image}", file=sys.stderr)
         answer, used_provider = solve(image, args.provider, args.gemini_models, args.ollama_model, args.timeout)
         print(f"[answer] {answer} via {used_provider}")
-        blink_caps(answer, args.interval, args.group_interval, args.dry_run)
+        blink_caps(answer, args.interval, args.group_interval, args.dry_run, backend=args.led_backend)
         return True
     except Exception as exc:  # noqa: BLE001 - CLI entry point
         print(f"[error] {exc}", file=sys.stderr)
@@ -298,9 +366,10 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--provider", choices=["auto", "gemini", "ollama"], default="auto")
     parser.add_argument("--gemini-model", action="append", help="Gemini model in fallback order (repeatable). Default: gemini-3.7-flash, gemini-flash-latest, gemini-3.5-flash, gemini-flash-lite-latest")
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
-    parser.add_argument("--timeout", type=float, default=20.0)
-    parser.add_argument("--interval", type=float, default=0.22, help="Delay between Caps Lock key events")
+    parser.add_argument("--timeout", type=float, default=15.0, help="Per-model API timeout in seconds")
+    parser.add_argument("--interval", type=float, default=0.20, help="Delay between Caps Lock key/LED events")
     parser.add_argument("--group-interval", type=float, default=1.0, help="Delay between multiple answer letters")
+    parser.add_argument("--led-backend", choices=["auto", "brightnessctl", "ydotool"], default="auto", help="LED signaling backend (default: auto detects brightnessctl hardware LED first, then ydotool)")
     parser.add_argument("--dry-run", action="store_true", help="Do not blink LED")
     parser.add_argument("--watch", action="store_true", help="Watch screenshot folder and solve every new image")
     parser.add_argument("--poll", type=float, default=0.5, help="Watch polling interval in seconds")

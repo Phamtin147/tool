@@ -3,12 +3,11 @@
 ## Chạy tool
 
 ```bash
-sudo ydotoold -p /run/user/$(id -u)/.ydotool_socket -P 0660 -o $(id -u):$(id -g) &
 cd /home/amtia/tool/quiz-led-solver
 python3 quiz_led.py --watch
 ```
 
-Sau đó cứ chụp màn hình. Khi có ảnh mới trong `/home/amtia/Pictures/screenshots`, tool tự gửi Gemini và nháy Caps Lock đáp án.
+> **Lưu ý**: Tool tự động điều khiển trực tiếp đèn phần cứng bàn phím (`brightnessctl`), không làm thay đổi trạng thái gõ chữ hoa/thường của Caps Lock. Nếu hệ thống không có `brightnessctl`, tool tự fallback sang `ydotool`.
 
 ## Mã nháy
 
