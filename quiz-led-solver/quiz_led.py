@@ -20,6 +20,7 @@ import re
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable
 
@@ -177,17 +178,49 @@ def provider_order(provider: str) -> list[str]:
     return [provider]
 
 
-def solve(path: Path, provider: str, gemini_models: list[str], ollama_model: str, timeout: float) -> tuple[str, str]:
+def solve(
+    path: Path,
+    provider: str,
+    gemini_models: list[str],
+    ollama_model: str,
+    timeout: float,
+    race: bool = True,
+) -> tuple[str, str]:
     errors: list[str] = []
     for name in provider_order(provider):
         if name == "gemini":
-            for model in gemini_models:
-                try:
-                    print(f"[ai] trying gemini:{model}...", file=sys.stderr)
-                    return ask_gemini(path, model, timeout), f"gemini:{model}"
-                except Exception as exc:  # noqa: BLE001 - CLI should show all model failures
-                    errors.append(f"gemini:{model}: {exc}")
-                    print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
+            if race and len(gemini_models) > 1:
+                print(
+                    f"[ai] racing {len(gemini_models)} Gemini models in parallel: {', '.join(gemini_models)}...",
+                    file=sys.stderr,
+                )
+                t_start = time.time()
+                with ThreadPoolExecutor(max_workers=len(gemini_models)) as executor:
+                    futures = {
+                        executor.submit(ask_gemini, path, model, timeout): model
+                        for model in gemini_models
+                    }
+                    for future in as_completed(futures):
+                        model = futures[future]
+                        try:
+                            ans = future.result()
+                            dt = time.time() - t_start
+                            print(
+                                f"[ai] fastest response from gemini:{model} in {dt:.2f}s -> answer {ans}",
+                                file=sys.stderr,
+                            )
+                            return ans, f"gemini:{model}"
+                        except Exception as exc:  # noqa: BLE001 - CLI should show all model failures
+                            errors.append(f"gemini:{model}: {exc}")
+                            print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
+            else:
+                for model in gemini_models:
+                    try:
+                        print(f"[ai] trying gemini:{model}...", file=sys.stderr)
+                        return ask_gemini(path, model, timeout), f"gemini:{model}"
+                    except Exception as exc:  # noqa: BLE001 - CLI should show all model failures
+                        errors.append(f"gemini:{model}: {exc}")
+                        print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
             continue
         if name == "ollama":
             try:
@@ -325,7 +358,14 @@ def process_image(image: Path, args: argparse.Namespace) -> bool:
     try:
         wait_for_stable_file(image)
         print(f"[image] {image}", file=sys.stderr)
-        answer, used_provider = solve(image, args.provider, args.gemini_models, args.ollama_model, args.timeout)
+        answer, used_provider = solve(
+            image,
+            args.provider,
+            args.gemini_models,
+            args.ollama_model,
+            args.timeout,
+            race=args.race,
+        )
         print(f"[answer] {answer} via {used_provider}")
         blink_caps(answer, args.interval, args.group_interval, args.dry_run, backend=args.led_backend)
         return True
@@ -370,6 +410,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--interval", type=float, default=0.20, help="Delay between Caps Lock key/LED events")
     parser.add_argument("--group-interval", type=float, default=1.0, help="Delay between multiple answer letters")
     parser.add_argument("--led-backend", choices=["auto", "brightnessctl", "ydotool"], default="auto", help="LED signaling backend (default: auto detects brightnessctl hardware LED first, then ydotool)")
+    parser.add_argument("--race", action=argparse.BooleanOptionalAction, default=True, help="Query all Gemini models concurrently and take the fastest result (default: True)")
     parser.add_argument("--dry-run", action="store_true", help="Do not blink LED")
     parser.add_argument("--watch", action="store_true", help="Watch screenshot folder and solve every new image")
     parser.add_argument("--poll", type=float, default=0.5, help="Watch polling interval in seconds")
