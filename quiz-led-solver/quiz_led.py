@@ -118,7 +118,7 @@ def ask_gemini(path: Path, model: str, timeout: float) -> str:
         ],
         "generationConfig": {
             "temperature": 0,
-            "maxOutputTokens": 256,
+            "maxOutputTokens": 1024,
         },
     }
 
@@ -135,7 +135,16 @@ def ask_gemini(path: Path, model: str, timeout: float) -> str:
     except (KeyError, IndexError, TypeError) as exc:
         raise RuntimeError(f"Unexpected Gemini response: {json.dumps(data)[:500]}") from exc
 
-    text = "".join(part.get("text", "") for part in parts)
+    # Filter for visible text parts, excluding reasoning-only thought parts if present
+    text_parts = [
+        part.get("text", "")
+        for part in parts
+        if not part.get("thought", False) and "text" in part
+    ]
+    if not text_parts:
+        text_parts = [part.get("text", "") for part in parts if "text" in part]
+
+    text = "".join(text_parts)
     if not text.strip():
         raise RuntimeError(f"Empty Gemini response: {json.dumps(data)[:500]}")
     return parse_answer(text)
@@ -287,7 +296,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--dir", type=Path, default=SCREENSHOT_DIR, help="Screenshot directory")
     parser.add_argument("--image", type=Path, help="Specific image file. Defaults to newest image in --dir")
     parser.add_argument("--provider", choices=["auto", "gemini", "ollama"], default="auto")
-    parser.add_argument("--gemini-model", action="append", help="Gemini model in fallback order (repeatable). Default: gemini-3.6-flash, gemini-3.5-flash, gemini-3.1-flash-lite")
+    parser.add_argument("--gemini-model", action="append", help="Gemini model in fallback order (repeatable). Default: gemini-3.7-flash, gemini-flash-latest, gemini-3.5-flash, gemini-flash-lite-latest")
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
     parser.add_argument("--timeout", type=float, default=20.0)
     parser.add_argument("--interval", type=float, default=0.22, help="Delay between Caps Lock key events")
@@ -298,11 +307,17 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--process-existing", action="store_true", help="In watch mode, process current newest image immediately")
     args = parser.parse_args(argv)
 
-    gemini_models = args.gemini_model or [
-        os.environ.get("GEMINI_MODEL_1", "gemini-3.6-flash"),
-        os.environ.get("GEMINI_MODEL_2", "gemini-3.5-flash"),
-        os.environ.get("GEMINI_MODEL_3", "gemini-3.1-flash-lite"),
-    ]
+    if args.gemini_model:
+        gemini_models = args.gemini_model
+    elif "GEMINI_MODELS" in os.environ:
+        gemini_models = [m.strip() for m in os.environ["GEMINI_MODELS"].split(",") if m.strip()]
+    else:
+        gemini_models = [
+            os.environ.get("GEMINI_MODEL_1", "gemini-3.7-flash"),
+            os.environ.get("GEMINI_MODEL_2", "gemini-flash-latest"),
+            os.environ.get("GEMINI_MODEL_3", "gemini-3.5-flash"),
+            os.environ.get("GEMINI_MODEL_4", "gemini-flash-lite-latest"),
+        ]
     args.gemini_models = gemini_models
 
     if args.watch:
