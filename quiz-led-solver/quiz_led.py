@@ -404,7 +404,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--dir", type=Path, default=SCREENSHOT_DIR, help="Screenshot directory")
     parser.add_argument("--image", type=Path, help="Specific image file. Defaults to newest image in --dir")
     parser.add_argument("--provider", choices=["auto", "gemini", "ollama"], default="auto")
-    parser.add_argument("--gemini-model", action="append", help="Gemini model in fallback order (repeatable). Default: gemini-3.7-flash, gemini-flash-latest, gemini-3.5-flash, gemini-flash-lite-latest")
+    parser.add_argument("--gemini-model", action="append", help="Gemini model in fallback order (repeatable). Default: gemini-3.7-flash, gemini-3.5-flash, gemini-3.5-flash-lite")
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
     parser.add_argument("--timeout", type=float, default=15.0, help="Per-model API timeout in seconds")
     parser.add_argument("--interval", type=float, default=0.20, help="Delay between Caps Lock key/LED events")
@@ -424,9 +424,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     else:
         gemini_models = [
             os.environ.get("GEMINI_MODEL_1", "gemini-3.7-flash"),
-            os.environ.get("GEMINI_MODEL_2", "gemini-flash-latest"),
-            os.environ.get("GEMINI_MODEL_3", "gemini-3.5-flash"),
-            os.environ.get("GEMINI_MODEL_4", "gemini-flash-lite-latest"),
+            os.environ.get("GEMINI_MODEL_2", "gemini-3.5-flash"),
+            os.environ.get("GEMINI_MODEL_3", "gemini-3.5-flash-lite"),
         ]
     args.gemini_models = gemini_models
 
