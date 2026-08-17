@@ -12,12 +12,12 @@ python3 quiz_led.py --watch
 ## Mã nháy
 
 ```
-A = 2 lần
-B = 4 lần
-C = 6 lần
-D = 8 lần
-E = 10 lần
-F = 12 lần
+A = 1 lần
+B = 2 lần
+C = 3 lần
+D = 4 lần
+E = 5 lần
+F = 6 lần
 ```
 
 ## Test không nháy đèn

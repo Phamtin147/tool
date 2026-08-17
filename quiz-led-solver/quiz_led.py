@@ -2,7 +2,7 @@
 """CLI tool: newest screenshot -> Vision AI -> blink Caps Lock answer code.
 
 Answer encoding:
-A=2 key events, B=4, C=6, D=8, E=10, F=12.
+A=1 blink, B=2 blinks, C=3 blinks, D=4 blinks, E=5 blinks, F=6 blinks.
 
 Requirements:
 - ydotoold running and user-accessible socket for LED/key event signaling
@@ -236,7 +236,7 @@ def solve(
 
 
 def blink_count(letter: str) -> int:
-    return (ord(letter) - ord("A") + 1) * 2
+    return ord(letter) - ord("A") + 1
 
 
 def is_caps_on() -> bool:
