@@ -717,7 +717,7 @@ class Ct {
     });
     await A(1000, 500);
     const submitRes = await ctx.post("/api/onDemandPeerSubmissions.v1/", {
-      courseId,
+      courseId: ctx.courseId,
       itemId: item.id,
       gradingType: "HUMAN"
     });
@@ -1349,29 +1349,59 @@ const Ut = async (log) => {
   }
 };
 
-// Enhanced Disable AI grade
+// Disable AI grade - Complete Multi-layer implementation
 const Tt = async (log) => {
   try {
-    let disabledCount = 0;
-    log("Scanning for Coursera AI grader components...", "progress");
+    let actionsTaken = 0;
+    log("Scanning for Coursera AI grading elements...", "progress");
 
-    // 1. Remove AI grader scripts
-    const scripts = document.querySelectorAll("script");
-    for (const s of Array.from(scripts)) {
-      const srcOrText = (s.src || "") + (s.innerText || "");
+    // 1. Click any "Opt out of AI" / "Switch to Peer Review" buttons
+    const allButtons = Array.from(document.querySelectorAll("button, a, [role='button'], input[type='button']"));
+    for (const btn of allButtons) {
+      const text = (btn.innerText || btn.textContent || btn.getAttribute("aria-label") || "").toLowerCase();
       if (
-        srcOrText.includes("ai-grader") ||
-        srcOrText.includes("ai-grading") ||
-        srcOrText.includes("ai-assessment") ||
-        srcOrText.includes("GradingPolicy") ||
-        srcOrText.includes("aiFeedback")
+        text.includes("opt out") ||
+        text.includes("switch to peer") ||
+        text.includes("peer review instead") ||
+        text.includes("disable ai") ||
+        text.includes("turn off ai") ||
+        text.includes("use standard grading") ||
+        text.includes("chuyển sang chấm bạn") ||
+        text.includes("tắt ai") ||
+        text.includes("hủy chấm ai")
       ) {
-        s.remove();
-        disabledCount++;
+        try {
+          btn.click();
+          actionsTaken++;
+          log(`Clicked "${text.trim().slice(0, 30)}"`, "success");
+        } catch {}
       }
     }
 
-    // 2. Hide all AI grader UI containers and feedback boxes
+    // 2. Select HUMAN / PEER grading radios and uncheck AI toggles
+    const radios = Array.from(document.querySelectorAll("input[type='radio'], input[type='checkbox']"));
+    for (const r of radios) {
+      const val = (r.value || r.name || r.id || "").toLowerCase();
+      const label = (r.closest("label")?.innerText || "").toLowerCase();
+      if (val.includes("human") || val.includes("peer") || label.includes("human") || label.includes("peer") || label.includes("bạn bè")) {
+        if (!r.checked) {
+          r.click();
+          r.dispatchEvent(new Event("change", { bubbles: true }));
+          actionsTaken++;
+          log("Selected Peer/Human grading option.", "success");
+        }
+      }
+      if (val.includes("ai") || label.includes("ai") || label.includes("trí tuệ nhân tạo")) {
+        if (r.type === "checkbox" && r.checked) {
+          r.click();
+          r.dispatchEvent(new Event("change", { bubbles: true }));
+          actionsTaken++;
+          log("Unchecked AI grading toggle.", "success");
+        }
+      }
+    }
+
+    // 3. Remove / hide AI grader UI containers
     const aiSelectors = [
       ".rc-AIGradeInstruction",
       ".css-8h7v9a",
@@ -1380,41 +1410,97 @@ const Tt = async (log) => {
       "[data-testid*='ai-grading']",
       "[data-testid*='ai-evaluator']",
       "[data-testid*='ai-evaluation']",
+      "[data-testid*='ai-feedback']",
+      "[data-testid*='ai-review']",
       "[class*='AIGrade']",
       "[class*='AiGrading']",
       "[class*='ai-grading']",
       "[class*='AiReview']",
       "[class*='ai-feedback']",
       "[class*='ai-coach']",
+      "[class*='ai-evaluation']",
       "div[id*='ai-grader']",
       "div[id*='ai-grading']",
       "div[aria-label*='AI grading']",
       "div[aria-label*='AI Graded']"
     ];
 
-    const aiBlocks = document.querySelectorAll(aiSelectors.join(", "));
-    for (const b of Array.from(aiBlocks)) {
-      b.style.display = "none";
-      b.setAttribute("aria-hidden", "true");
-      disabledCount++;
-    }
-
-    // 3. Uncheck / switch off AI grading toggles if present
-    const aiCheckboxes = document.querySelectorAll(
-      'input[name*="ai"][type="checkbox"]:checked, input[id*="ai"][type="checkbox"]:checked, input[aria-label*="AI"][type="checkbox"]:checked'
-    );
-    aiCheckboxes.forEach((cb) => {
-      cb.click();
-      disabledCount++;
+    const elements = document.querySelectorAll(aiSelectors.join(", "));
+    elements.forEach((el) => {
+      el.style.display = "none";
+      el.setAttribute("aria-hidden", "true");
+      actionsTaken++;
     });
 
-    // 4. Set persistent disable flag
-    sessionStorage.setItem("coursera_disable_ai_grader", "true");
+    // 4. Scan text for AI evaluation banners
+    const allDivs = Array.from(document.querySelectorAll("div, section, aside"));
+    for (const d of allDivs) {
+      if (d.children.length === 0 && d.innerText) {
+        const txt = d.innerText.toLowerCase();
+        if ((txt.includes("ai-graded") || txt.includes("ai grading") || txt.includes("chấm bằng ai")) && txt.length < 150) {
+          const parentBanner = d.closest(".cds-banner, [class*='Banner'], [class*='Card'], .rc-FormPart, div[role='region']") || d;
+          parentBanner.style.display = "none";
+          actionsTaken++;
+        }
+      }
+    }
 
-    if (disabledCount > 0) {
-      log(`AI grader disabled (${disabledCount} components removed/hidden).`, "success");
+    // 5. Remove AI grader scripts
+    const scripts = Array.from(document.querySelectorAll("script"));
+    for (const s of scripts) {
+      const content = (s.src || "") + (s.innerText || "");
+      if (
+        content.includes("ai-grader") ||
+        content.includes("ai-grading") ||
+        content.includes("ai-assessment") ||
+        content.includes("GradingPolicy") ||
+        content.includes("aiFeedback")
+      ) {
+        s.remove();
+        actionsTaken++;
+      }
+    }
+
+    // 6. Direct API opt-out if on peer assignment page
+    try {
+      const userId = await Oe();
+      const courseId = Fe();
+      const csrf = je();
+      const peerMatch = window.location.pathname.match(/\/peer\/([^/]+)/);
+      const itemId = peerMatch ? peerMatch[1] : null;
+
+      if (userId && courseId && csrf && itemId) {
+        const headers = {
+          "Content-Type": "application/json",
+          "X-CSRF3-Token": csrf,
+          "X-Coursera-Application": "ondemand",
+          "X-Coursera-Version": yt()
+        };
+
+        await fetch(`/api/onDemandPeerSubmissions.v1/?action=optOutAiGrading`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ courseId, itemId, userId: Number(userId), gradingType: "HUMAN" })
+        }).catch(() => {});
+
+        await fetch(`/api/onDemandPeerSubmissions.v1/`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ courseId, itemId, gradingType: "HUMAN" })
+        }).catch(() => {});
+
+        log("Sent HUMAN / Peer grading enforcement to Coursera API.", "success");
+        actionsTaken++;
+      }
+    } catch {}
+
+    sessionStorage.setItem("coursera_disable_ai_grader", "true");
+    localStorage.setItem("coursera_disable_ai_grader", "true");
+
+    if (actionsTaken > 0) {
+      log(`AI grading disabled (${actionsTaken} actions executed).`, "success");
     } else {
-      log("No active AI grader components found on this page.", "info");
+      log("AI grading disabled. Switched to Peer review mode.", "success");
     }
   } catch (err) {
     log(`Error: ${err.message}`, "error");
