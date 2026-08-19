@@ -62,7 +62,7 @@ function playSuccessChime() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
-    const notes = [523.25, 659.25, 1046.5]; // C5, E5, C6 (Bright success chord)
+    const notes = [523.25, 659.25, 1046.5]; // C5, E5, C6 (Bright chord)
     notes.forEach((freq, index) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1079,8 +1079,9 @@ function parseGeminiQuizResponse(responseText, totalChoices) {
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       const jsonStr = cleaned.slice(firstBrace, lastBrace + 1);
       const parsed = JSON.parse(jsonStr);
-      if (Array.isArray(parsed.correct_indices)) {
-        const filtered = parsed.correct_indices.map(Number).filter((n) => n >= 1 && n <= totalChoices);
+      const arr = parsed.correct_indices || parsed.correctIndices || parsed.indices || parsed.answers || parsed.correct_answers;
+      if (Array.isArray(arr)) {
+        const filtered = arr.map(Number).filter((n) => n >= 1 && n <= totalChoices);
         if (filtered.length > 0) return filtered;
       }
     }
@@ -1104,6 +1105,35 @@ function parseGeminiQuizResponse(responseText, totalChoices) {
   }
 
   return [];
+}
+
+// Robust element clicker that reliably activates both radio and checkbox
+function setChoiceChecked(choice) {
+  if (!choice) return;
+  const { input, wrapper } = choice;
+
+  if (input) {
+    if (!input.checked) {
+      const label = input.closest("label") || wrapper;
+      if (label && label !== input) {
+        label.click();
+      } else {
+        input.click();
+      }
+      if (!input.checked) {
+        input.checked = true;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+  } else if (wrapper) {
+    wrapper.click();
+  }
+
+  if (wrapper) {
+    wrapper.style.outline = "2px solid #10b981";
+    wrapper.style.borderRadius = "6px";
+  }
 }
 
 const solveQuizWithGemini = async (log) => {
@@ -1158,63 +1188,44 @@ const solveQuizWithGemini = async (log) => {
     let questionText = qBody ? qBody.innerText.trim() : container.innerText.split("\n")[0];
     questionText = questionText.replace(/^\d+\.\nQuestion \d+\n\n/, "").replace(/^Question \d+\n+/, "").trim();
 
-    // 2. Choices extraction
-    const optionWrappers = container.querySelectorAll(
-      U.OPTION_WRAPPER +
-        ", .cds-checkboxAndRadio-label, label[class*='checkboxAndRadio'], .rc-FormOption, div[class*='Option'], label.rc-Option"
-    );
-
+    // 2. Choices extraction (Directly find all inputs to avoid missing checkbox groups)
+    const inputs = Array.from(container.querySelectorAll('input[type="radio"], input[type="checkbox"]'));
     const choicesData = [];
-    optionWrappers.forEach((opt, oIdx) => {
+    const isMultiSelect = inputs.some((inp) => inp.type === "checkbox") || questionText.toLowerCase().includes("select all");
+
+    inputs.forEach((inp, oIdx) => {
+      const parentLabel = inp.closest("label") || inp.closest(".rc-Option") || inp.parentElement;
       const labelEl =
-        opt.querySelector(U.CHOICE_LABEL) ||
-        opt.querySelector(".rc-CML") ||
-        opt.querySelector(".cds-checkboxAndRadio-labelText") ||
-        opt.querySelector("span");
-      const choiceText = labelEl ? labelEl.innerText.trim() : opt.innerText.trim();
-      const inputEl =
-        opt.querySelector('input[type="radio"], input[type="checkbox"]') ||
-        opt.closest("label")?.querySelector("input") ||
-        opt.parentElement?.querySelector("input");
+        parentLabel?.querySelector(U.CHOICE_LABEL) ||
+        parentLabel?.querySelector(".rc-CML") ||
+        parentLabel?.querySelector(".cds-checkboxAndRadio-labelText") ||
+        parentLabel?.querySelector("span");
+      const choiceText = labelEl ? labelEl.innerText.trim() : parentLabel?.innerText?.trim() || `Option ${oIdx + 1}`;
 
-      if (choiceText && (inputEl || opt)) {
-        choicesData.push({
-          index: oIdx + 1,
-          text: choiceText,
-          wrapper: opt,
-          input: inputEl
-        });
-      }
-    });
-
-    // Fallback: direct inputs
-    if (choicesData.length === 0) {
-      const directInputs = container.querySelectorAll('input[type="radio"], input[type="checkbox"]');
-      directInputs.forEach((inp, oIdx) => {
-        const parentLabel = inp.closest("label") || inp.parentElement;
-        const text = parentLabel ? parentLabel.innerText.trim() : `Option ${oIdx + 1}`;
-        choicesData.push({
-          index: oIdx + 1,
-          text,
-          wrapper: parentLabel || inp,
-          input: inp
-        });
+      choicesData.push({
+        index: oIdx + 1,
+        text: choiceText,
+        wrapper: parentLabel || inp,
+        input: inp,
+        isCheckbox: inp.type === "checkbox"
       });
-    }
+    });
 
     parsedQuestions.push({
       qNumber,
       container,
       questionText,
-      choicesData
+      choicesData,
+      isMultiSelect
     });
   }
 
-  // Build Batch Prompt
+  // Build Batch Prompt with explicit Multi-Select / Single-Choice notices
   const qBlocks = parsedQuestions
     .map((q) => {
+      const typeNotice = q.isMultiSelect ? " [MULTI-SELECT: Choose ALL correct options]" : " [SINGLE-CHOICE: Choose 1 option]";
       const choicesText = q.choicesData.map((c) => `  ${c.index}. ${c.text}`).join("\n");
-      return `--- Question ${q.qNumber} ---
+      return `--- Question ${q.qNumber}${typeNotice} ---
 ${q.questionText}
 Choices:
 ${choicesText}`;
@@ -1222,6 +1233,8 @@ ${choicesText}`;
     .join("\n\n");
 
   const batchPrompt = `You are an expert AI quiz solver. Solve ALL the following multiple-choice questions.
+Some questions are SINGLE-CHOICE (1 answer), and some questions are MULTI-SELECT (multiple correct answers).
+For multi-select questions, you MUST include ALL correct choices in the "correct_indices" array.
 
 ${qBlocks}
 
@@ -1237,20 +1250,25 @@ where "correct_indices" are the 1-based indices of the correct choices for that 
   log(`Sending all ${parsedQuestions.length} questions to Gemini...`, "progress");
 
   let solvedCount = 0;
-  let batchSuccess = false;
 
   try {
     const responseText = await queryGeminiApi(batchPrompt, apiKey, selectedModel);
     const answers = parseBatchResponse(responseText);
 
     if (answers && Array.isArray(answers) && answers.length > 0) {
-      batchSuccess = true;
-      log(`AI answered in batch. Applying answers...`, "progress");
+      log("AI answered in batch. Applying answers...", "progress");
 
       for (const ans of answers) {
         const qNum = ans.question_number || ans.qNumber || ans.questionNumber || ans.q;
         const targetQ = parsedQuestions.find((q) => q.qNumber === qNum);
-        const correctIndices = ans.correct_indices || ans.correctIndices || ans.indices || ans.answers || [];
+        const correctIndices =
+          ans.correct_indices ||
+          ans.correctIndices ||
+          ans.indices ||
+          ans.answers ||
+          ans.correct_answers ||
+          ans.correct ||
+          [];
 
         if (targetQ && Array.isArray(correctIndices) && correctIndices.length > 0) {
           const selectedTexts = [];
@@ -1258,17 +1276,7 @@ where "correct_indices" are the 1-based indices of the correct choices for that 
             const targetChoice = targetQ.choicesData[choiceIdx - 1];
             if (targetChoice) {
               selectedTexts.push(targetChoice.text);
-              if (targetChoice.input) {
-                targetChoice.input.click();
-                targetChoice.input.dispatchEvent(new Event("change", { bubbles: true }));
-                targetChoice.input.dispatchEvent(new Event("input", { bubbles: true }));
-              } else if (targetChoice.wrapper) {
-                targetChoice.wrapper.click();
-              }
-              if (targetChoice.wrapper) {
-                targetChoice.wrapper.style.outline = "2px solid #10b981";
-                targetChoice.wrapper.style.borderRadius = "6px";
-              }
+              setChoiceChecked(targetChoice);
             }
           }
           log(`[Q${qNum}] Selected: ${selectedTexts.join(", ")}`, "success");
@@ -1280,7 +1288,7 @@ where "correct_indices" are the 1-based indices of the correct choices for that 
     log(`Batch query status: ${batchErr.message}. Checking fallback...`, "info");
   }
 
-  // If batch had missing answers, fallback for remaining unsolved questions
+  // Fallback for any remaining unanswered questions
   if (solvedCount < parsedQuestions.length) {
     const remainingQuestions = parsedQuestions.filter((q) => {
       const checkedInputs = q.container.querySelectorAll('input:checked, input[type="radio"]:checked, input[type="checkbox"]:checked');
@@ -1291,7 +1299,10 @@ where "correct_indices" are the 1-based indices of the correct choices for that 
       log(`Solving ${remainingQuestions.length} remaining questions...`, "progress");
       for (const q of remainingQuestions) {
         try {
-          const singlePrompt = `You are an expert AI quiz solver. Solve this multiple-choice question.
+          const typeNotice = q.isMultiSelect
+            ? "This is a MULTI-SELECT question. Choose ALL correct choices."
+            : "This is a single-choice question.";
+          const singlePrompt = `You are an expert AI quiz solver. Solve this multiple-choice question. ${typeNotice}
 
 Question:
 ${q.questionText}
@@ -1310,17 +1321,7 @@ Respond ONLY in valid JSON format:
               const targetChoice = q.choicesData[choiceIdx - 1];
               if (targetChoice) {
                 selectedTexts.push(targetChoice.text);
-                if (targetChoice.input) {
-                  targetChoice.input.click();
-                  targetChoice.input.dispatchEvent(new Event("change", { bubbles: true }));
-                  targetChoice.input.dispatchEvent(new Event("input", { bubbles: true }));
-                } else if (targetChoice.wrapper) {
-                  targetChoice.wrapper.click();
-                }
-                if (targetChoice.wrapper) {
-                  targetChoice.wrapper.style.outline = "2px solid #10b981";
-                  targetChoice.wrapper.style.borderRadius = "6px";
-                }
+                setChoiceChecked(targetChoice);
               }
             }
             log(`[Q${q.qNumber}] Selected: ${selectedTexts.join(", ")}`, "success");
@@ -1389,7 +1390,6 @@ const Tt = async (log) => {
     log("Blocking AI Grader & Switching to Human Review...", "progress");
     let actionsTaken = 0;
 
-    // Set permanent disable flags
     sessionStorage.setItem("coursera_disable_ai_grader", "true");
     localStorage.setItem("coursera_disable_ai_grader", "true");
     localStorage.setItem("coursera:ai_grade_opt_out", "true");
