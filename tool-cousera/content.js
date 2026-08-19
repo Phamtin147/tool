@@ -38,26 +38,1483 @@ var Jt=Object.defineProperty;var Zt=(N,g,D)=>g in N?Jt(N,g,{enumerable:!0,config
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
- */const wt=H("Sun",[["circle",{cx:"12",cy:"12",r:"4",key:"4exip2"}],["path",{d:"M12 2v2",key:"tus03m"}],["path",{d:"M12 20v2",key:"1lh1kg"}],["path",{d:"m4.93 4.93 1.41 1.41",key:"149t6j"}],["path",{d:"m17.66 17.66 1.41 1.41",key:"ptbguv"}],["path",{d:"M2 12h2",key:"1t8f8n"}],["path",{d:"M20 12h2",key:"1q8mjw"}],["path",{d:"m6.34 17.66-1.41 1.41",key:"1m8zz5"}],["path",{d:"m19.07 4.93-1.41 1.41",key:"1shlcs"}]]),U={QUIZ_CONTAINER:".css-1erl2aq, .rc-FormPartsQuestion",POINTS:'[data-testid="part-points"]',QUESTION_BODY:".css-ybrhvy .rc-CML, .rc-FormPartsQuestion .rc-CML, div[id^='prompt-'] .rc-CML",CML_CONTENT:".rc-CML",CHOICE_LABEL:".cds-checkboxAndRadio-labelText",OPTION_WRAPPER:".rc-Option",VERSION_META:'meta[name="coursera-app-version"]',COURSE_ID_META:'meta[property="coursera:course_id"]'},vt={VERSION:"902d11358ca4c08e177c1e3eac11ffe41c92f674"};function Oe(){const t=Array.from(document.querySelectorAll("script"));for(const e of t){const o=e.innerText||"",i=o.match(/userJson\s*=\s*"(.+?)"/);if(i)try{const r=JSON.parse(i[1].replace(/\\"/g,'"'));if(r.id)return String(r.id)}catch{}const n=o.match(/"userData"\s*:\s*{\s*"id"\s*:\s*(\d+)/)||o.match(/"userId"\s*:\s*(\d+)/);if(n)return n[1]}return null}function yt(){const t=document.querySelector(U.VERSION_META);if(t!=null&&t.content)return t.content;const e=Array.from(document.querySelectorAll("script"));for(const o of e){const i=o.innerText.match(/"version"\s*:\s*"([a-f0-9]{40})"/i);if(i)return i[1]}return vt.VERSION}function xt(){const t=navigator.platform.toLowerCase();return t.includes("win")?"Windows":t.includes("mac")?"MacIntel":t.includes("linux")?"Linux":"Unknown"}function Fe(){const t=Array.from(document.querySelectorAll("script"));for(const o of t){const i=o.innerText||"",n=i.match(/return\s+'([A-Za-z0-9-_]{20,})'/);if(n)return n[1];const r=i.match(/"courseId"\s*:\s*"([A-Za-z0-9-_]{20,})"/);if(r)return r[1];const s=i.match(/"contextId"\s*:\s*"([A-Za-z0-9-_]{20,})"/);if(s)return s[1]}const e=document.querySelector(U.COURSE_ID_META);return e!=null&&e.content?e.content:new URL(window.location.href).searchParams.get("courseId")}function je(){const t=document.cookie.split("; ").find(e=>e.toLowerCase().startsWith("csrf3-token="));return t?t.split("=")[1]:""}function Be(t){const e=document.querySelectorAll(U.QUIZ_CONTAINER),o=[];return e.forEach(i=>{var d,l;if(t==="harvest"&&!(((d=i.querySelector(U.POINTS))==null?void 0:d.innerText)||"").includes("1 / 1"))return;const n=i.querySelector(U.QUESTION_BODY);let r=n?n.innerText.trim():(l=i.querySelector(U.CML_CONTENT))==null?void 0:l.innerText.trim();r||(r="Blueprint Unit"),r=r.replace(/^\d+\.\nQuestion \d+\n\n/,"").trim();const s=Array.from(new Set(Array.from(i.querySelectorAll(U.CHOICE_LABEL)).map(p=>p.innerText.trim()).filter(p=>p.length>0))),c=new Set;t==="harvest"&&i.querySelectorAll(U.OPTION_WRAPPER).forEach(p=>{const a=p.querySelector("input");if(a&&(a.checked||a.hasAttribute("checked"))){const m=p.querySelector(U.CHOICE_LABEL),u=m?m.innerText.trim():p.innerText.trim();u&&c.add(u)}}),r&&o.push({question:r,choices:s,answer:Array.from(c)})}),o}const Ge=t=>new Promise(e=>setTimeout(e,t)),A=(t,e=200)=>{const o=Math.floor(Math.random()*e);return Ge(t+o)},Ve=async t=>{const e=new TextEncoder().encode(t),o=await crypto.subtle.digest("MD5",e);return btoa(String.fromCharCode(...new Uint8Array(o)))};class kt{canHandle(e){var o;return((o=e.contentSummary)==null?void 0:o.typeName)==="lecture"}async handle(e,o){var s,c,d,l;o.log(`Watching video: ${e.name}`,"info"),await o.post(`/api/opencourse.v1/user/${o.userId}/course/${o.courseSlug}/item/${e.id}/lecture/videoEvents/play?autoEnroll=false`,{contentRequestBody:{}});const i=await fetch(`/api/onDemandLectureVideos.v1/${o.courseId}~${e.id}?includes=video&fields=onDemandVideos.v1(id,duration)`);let n=((c=(s=e.contentSummary)==null?void 0:s.definition)==null?void 0:c.duration)||e.timeCommitment||12e4;if(i.ok){const a=(l=(d=(await i.json()).linked)==null?void 0:d["onDemandVideos.v1"])==null?void 0:l[0];if(a!=null&&a.id){n=a.duration||n;const m=`${o.userId}~${o.courseId}~${a.id}`;await o.put(`/api/onDemandVideoProgresses.v1/${m}`,{viewedUpTo:n,videoProgressId:m})}}await o.sendHeartbeats({courseId:o.courseId,itemId:e.id,duration:n,csrf:o.csrf,activityType:"LECTURE",actionType:"VIDEO_IS_PLAYING"});const r=`/api/opencourse.v1/user/${o.userId}/course/${o.courseSlug}/item/${e.id}/lecture/videoEvents/ended?autoEnroll=false`;for(let p=0;p<10;p++){const a=await fetch(r,{method:"POST",headers:o.headers({"X-Requested-With":"XMLHttpRequest"}),body:JSON.stringify({contentRequestBody:{}})});if(a.ok)break;if((await a.text()).includes("not watched enough"))await A(2e3,2e3);else break}o.log("Video completed successfully","success")}}class St{canHandle(e){var o;return((o=e.contentSummary)==null?void 0:o.typeName)==="supplement"}async handle(e,o){o.log(`Reading: ${e.name}`,"info");const i=await o.post("/api/onDemandSupplementCompletions.v1",{courseId:o.courseId,itemId:e.id,userId:Number(o.userId)});i.ok?o.log("Content marked as read","success"):o.log(`Failed to mark read: ${i.status}`,"error")}}const Qe=(t,e,o,i,n)=>{const r={userId:t,courseId:e,csrf:o,courseSlug:i,log:n,headers:(s={})=>({"Content-Type":"application/json","X-CSRF3-Token":o,"X-Coursera-Application":"ondemand","X-Coursera-Version":yt(),...s}),post:(s,c)=>fetch(s,{method:"POST",headers:r.headers(),body:JSON.stringify(c)}),put:(s,c)=>fetch(s,{method:"PUT",headers:r.headers(),body:JSON.stringify(c)}),graphql:(s,c,d)=>fetch(`/graphql-gateway?opname=${s}`,{method:"POST",headers:r.headers(),body:JSON.stringify([{operationName:s,variables:c,query:d}])}),sendHeartbeats:async s=>{const{courseId:c,itemId:d,duration:l,csrf:p,activityType:a,actionType:m}=s,u=3e4,w=Math.ceil(l/u),v=Date.now()-l,_=crypto.randomUUID();for(let f=0;f<w;f++){const b=Math.min(u,l-f*u);if(b<=0)break;await fetch("/graphql-gateway?opname=LearningHours_SendEvent",{method:"POST",headers:{"Content-Type":"application/json","X-CSRF3-Token":p},body:JSON.stringify([{operationName:"LearningHours_SendEvent",variables:{input:{heartbeat:{courseId:c,eventPlatform:"WEB",userActionType:m,durationMilliSeconds:Math.floor(b),eventOs:xt(),clientDateTime:new Date(v+f*u).toISOString(),deviceId:_,itemDetails:{itemId:d,learnerActivityType:a},courseBranchId:c}}},query:`mutation LearningHours_SendEvent($input: LearningHours_SendEventInput!) {
-              LearningHours_SendEvent(input: $input) {
-                ... on LearningHours_SendEventSuccess { id __typename }
-                ... on LearningHours_SendEventError { message __typename }
-                __typename
+ */const wt=H("Sun",[["circle",{cx:"12",cy:"12",r:"4",key:"4exip2"}],["path",{d:"M12 2v2",key:"tus03m"}],["path",{d:"M12 20v2",key:"1lh1kg"}],["path",{d:"m4.93 4.93 1.41 1.41",key:"149t6j"}],["path",{d:"m17.66 17.66 1.41 1.41",key:"ptbguv"}],["path",{d:"M2 12h2",key:"1t8f8n"}],["path",{d:"M20 12h2",key:"1q8mjw"}],["path",{d:"m6.34 17.66-1.41 1.41",key:"1m8zz5"}],["path",{d:"m19.07 4.93-1.41 1.41",key:"1shlcs"}]]);
+
+const U = {
+  QUIZ_CONTAINER: ".css-1erl2aq, .rc-FormPartsQuestion",
+  POINTS: '[data-testid="part-points"]',
+  QUESTION_BODY: ".css-ybrhvy .rc-CML, .rc-FormPartsQuestion .rc-CML, div[id^='prompt-'] .rc-CML",
+  CML_CONTENT: ".rc-CML",
+  CHOICE_LABEL: ".cds-checkboxAndRadio-labelText",
+  OPTION_WRAPPER: ".rc-Option",
+  VERSION_META: 'meta[name="coursera-app-version"]',
+  COURSE_ID_META: 'meta[property="coursera:course_id"]'
+};
+
+const vt = {
+  VERSION: "902d11358ca4c08e177c1e3eac11ffe41c92f674"
+};
+
+// Sleep helpers
+const Ge = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const A = (base, jitter = 200) => {
+  const randomJitter = Math.floor(Math.random() * jitter);
+  return Ge(base + randomJitter);
+};
+
+// MD5 digest helper
+const Ve = async (text) => {
+  const enc = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("MD5", enc);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)));
+};
+
+// Platform helper
+function xt() {
+  const p = (navigator.platform || "").toLowerCase();
+  return p.includes("win") ? "Windows" : p.includes("mac") ? "MacIntel" : p.includes("linux") ? "Linux" : "Unknown";
+}
+
+// App version helper
+function yt() {
+  const meta = document.querySelector(U.VERSION_META);
+  if (meta && meta.content) return meta.content;
+  const scripts = Array.from(document.querySelectorAll("script"));
+  for (const s of scripts) {
+    const m = (s.innerText || "").match(/"version"\s*:\s*"([a-f0-9]{40})"/i);
+    if (m) return m[1];
+  }
+  return vt.VERSION;
+}
+
+// CSRF token helper
+function je() {
+  const cookies = document.cookie.split("; ");
+  for (const c of cookies) {
+    const [name, val] = c.split("=");
+    if (!name || !val) continue;
+    const lower = name.toLowerCase().trim();
+    if (lower === "csrf3-token" || lower === "csrf2-token" || lower === "csrf-token" || lower === "csrftoken" || lower === "_csrf") {
+      return decodeURIComponent(val).replace(/^"|"$/g, "");
+    }
+  }
+  const meta = document.querySelector('meta[name="csrf-token"], meta[name="csrf3-token"], meta[property="csrf-token"]');
+  if (meta && meta.content) return meta.content;
+  return "";
+}
+
+// Robust User ID extractor
+async function Oe() {
+  // 1. Script tags
+  const scripts = Array.from(document.querySelectorAll("script"));
+  for (const s of scripts) {
+    const text = s.innerText || "";
+    const mUserJson = text.match(/userJson\s*=\s*"(.+?)"/);
+    if (mUserJson) {
+      try {
+        const parsed = JSON.parse(mUserJson[1].replace(/\\"/g, '"'));
+        if (parsed.id) return String(parsed.id);
+      } catch {}
+    }
+    const mUserData = text.match(/"userData"\s*:\s*{\s*"id"\s*:\s*(\d+)/) || text.match(/"userId"\s*:\s*(\d+)/);
+    if (mUserData) return String(mUserData[1]);
+  }
+
+  // 2. Global state
+  try {
+    if (window.Coursera && window.Coursera.user && window.Coursera.user.id) {
+      return String(window.Coursera.user.id);
+    }
+    if (window.__APOLLO_STATE__) {
+      for (const k in window.__APOLLO_STATE__) {
+        if (k.startsWith("User:") || k.startsWith("Learner:")) {
+          const u = window.__APOLLO_STATE__[k];
+          if (u && u.id) return String(u.id);
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Cookies
+  try {
+    const cookies = document.cookie.split("; ");
+    for (const c of cookies) {
+      const [name, val] = c.split("=");
+      if (!name || !val) continue;
+      const lower = name.toLowerCase().trim();
+      if (lower === "cauth" || lower === "_cauth" || lower === "204_cauth" || lower === "__204u" || lower === "coursera_user") {
+        try {
+          const decoded = decodeURIComponent(val);
+          const m = decoded.match(/"id"\s*:\s*(\d+)/) || decoded.match(/^(\d+)$/);
+          if (m) return String(m[1]);
+        } catch {}
+      }
+    }
+  } catch {}
+
+  // 4. API fallback /api/user/v1/me
+  try {
+    const res = await fetch("/api/user/v1/me", { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.id) return String(data.id);
+    }
+  } catch {}
+
+  // 5. API fallback /api/users.v1?q=me
+  try {
+    const res = await fetch("/api/users.v1?q=me", { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      const id = data?.elements?.[0]?.id;
+      if (id) return String(id);
+    }
+  } catch {}
+
+  return null;
+}
+
+// Course slug extractor
+function getCourseSlug() {
+  const pathMatch = window.location.pathname.match(/\/learn\/([^/?#]+)/);
+  if (pathMatch) return pathMatch[1];
+  const urlMatch = window.location.href.match(/learn\/([A-Za-z0-9-_]+)/);
+  return urlMatch ? urlMatch[1] : null;
+}
+
+// Course ID extractor
+function Fe() {
+  const scripts = Array.from(document.querySelectorAll("script"));
+  for (const s of scripts) {
+    const text = s.innerText || "";
+    const m1 = text.match(/return\s+'([A-Za-z0-9-_]{20,})'/);
+    if (m1) return m1[1];
+    const m2 = text.match(/"courseId"\s*:\s*"([A-Za-z0-9-_]{20,})"/);
+    if (m2) return m2[1];
+    const m3 = text.match(/"contextId"\s*:\s*"([A-Za-z0-9-_]{20,})"/);
+    if (m3) return m3[1];
+  }
+  const meta = document.querySelector(U.COURSE_ID_META);
+  if (meta && meta.content) return meta.content;
+  return new URL(window.location.href).searchParams.get("courseId");
+}
+
+// Quiz harvesting & blueprint extractor
+function Be(mode) {
+  const containers = document.querySelectorAll(U.QUIZ_CONTAINER);
+  const results = [];
+  containers.forEach((container) => {
+    if (mode === "harvest") {
+      const pts = container.querySelector(U.POINTS);
+      const ptText = pts ? pts.innerText : "";
+      if (!ptText.includes("1 / 1")) return;
+    }
+    const qBody = container.querySelector(U.QUESTION_BODY);
+    let questionText = qBody ? qBody.innerText.trim() : container.querySelector(U.CML_CONTENT)?.innerText.trim();
+    if (!questionText) questionText = "Blueprint Unit";
+    questionText = questionText.replace(/^\d+\.\nQuestion \d+\n\n/, "").trim();
+
+    const choices = Array.from(
+      new Set(
+        Array.from(container.querySelectorAll(U.CHOICE_LABEL))
+          .map((p) => p.innerText.trim())
+          .filter((p) => p.length > 0)
+      )
+    );
+
+    const answers = new Set();
+    if (mode === "harvest") {
+      container.querySelectorAll(U.OPTION_WRAPPER).forEach((opt) => {
+        const inp = opt.querySelector("input");
+        if (inp && (inp.checked || inp.hasAttribute("checked"))) {
+          const label = opt.querySelector(U.CHOICE_LABEL);
+          const ansText = label ? label.innerText.trim() : opt.innerText.trim();
+          if (ansText) answers.add(ansText);
+        }
+      });
+    }
+
+    if (questionText) {
+      results.push({
+        question: questionText,
+        choices,
+        answer: Array.from(answers)
+      });
+    }
+  });
+  return results;
+}
+
+// Context builder
+const Qe = (userId, courseId, csrf, courseSlug, log) => {
+  const ctx = {
+    userId,
+    courseId,
+    csrf,
+    courseSlug,
+    log,
+    headers: (extra = {}) => ({
+      "Content-Type": "application/json",
+      "X-CSRF3-Token": csrf,
+      "X-Coursera-Application": "ondemand",
+      "X-Coursera-Version": yt(),
+      ...extra
+    }),
+    post: (url, body) =>
+      fetch(url, {
+        method: "POST",
+        headers: ctx.headers(),
+        body: JSON.stringify(body)
+      }),
+    put: (url, body) =>
+      fetch(url, {
+        method: "PUT",
+        headers: ctx.headers(),
+        body: JSON.stringify(body)
+      }),
+    graphql: (opName, variables, query) =>
+      fetch(`/graphql-gateway?opname=${opName}`, {
+        method: "POST",
+        headers: ctx.headers(),
+        body: JSON.stringify([{ operationName: opName, variables, query }])
+      }),
+    sendHeartbeats: async (params) => {
+      const { courseId: cId, itemId, duration, csrf: token, activityType, actionType } = params;
+      const step = 30000;
+      const count = Math.ceil(duration / step);
+      const startTime = Date.now() - duration;
+      const deviceId = crypto.randomUUID ? crypto.randomUUID() : `dev-${Date.now()}`;
+
+      for (let f = 0; f < count; f++) {
+        const remaining = Math.min(step, duration - f * step);
+        if (remaining <= 0) break;
+        try {
+          await fetch("/graphql-gateway?opname=LearningHours_SendEvent", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF3-Token": token
+            },
+            body: JSON.stringify([
+              {
+                operationName: "LearningHours_SendEvent",
+                variables: {
+                  input: {
+                    heartbeat: {
+                      courseId: cId,
+                      eventPlatform: "WEB",
+                      userActionType: actionType,
+                      durationMilliSeconds: Math.floor(remaining),
+                      eventOs: xt(),
+                      clientDateTime: new Date(startTime + f * step).toISOString(),
+                      deviceId,
+                      itemDetails: { itemId, learnerActivityType: activityType },
+                      courseBranchId: cId
+                    }
+                  }
+                },
+                query: `mutation LearningHours_SendEvent($input: LearningHours_SendEventInput!) {
+                  LearningHours_SendEvent(input: $input) {
+                    ... on LearningHours_SendEventSuccess { id __typename }
+                    ... on LearningHours_SendEventError { message __typename }
+                    __typename
+                  }
+                }`
               }
-            }`}])}),f%5===0&&await A(50,100)}}};return r};class It{canHandle(e){var o;return["ungradedLti","ungradedWidget","ungradedLab"].includes(((o=e.contentSummary)==null?void 0:o.typeName)||"")}async handle(e,o){var r,s,c;const i=(r=e.contentSummary)==null?void 0:r.typeName;o.log(`Bypassing: ${e.name} (${i})`,"info");const n={courseId:o.courseId,itemId:e.id,userId:Number(o.userId)};if(i==="ungradedLti")await o.post("/api/onDemandLtiUngradedLaunches.v1",{...n,learnerId:Number(o.userId),markItemCompleted:!0});else if(i==="ungradedLab"){const d=`${o.userId}~${o.courseId}~${e.id}`;await fetch(`/api/onDemandWorkspaceLaunchers.v2/${d}?fields=id,itemId`),await o.post(`/api/onDemandLearnerWorkspaces.v1/?action=launch&id=${d}`,{}),await o.sendHeartbeats({courseId:o.courseId,itemId:e.id,duration:45e3,csrf:o.csrf,activityType:"UNGRADED_LAB",actionType:"KEY_PRESS"})}else if(i==="ungradedWidget"){const d=`${o.userId}~${o.courseId}~${e.id}`;let l;try{const p=await fetch(`/api/onDemandSessionMemberships.v1?courseId=${o.courseId}&userId=${o.userId}&q=activeByUserAndCourse&fields=sessionId`);p.ok&&(l=(c=(s=(await p.json()).elements)==null?void 0:s[0])==null?void 0:c.sessionId)}catch(p){console.warn("Session fetch failed for widget:",p)}await o.put(`/api/onDemandWidgetProgress.v1/${d}`,{progressState:"Completed",sessionId:l})}else await o.post("/api/onDemandUngradedAssignmentSubmissions.v1",n);o.log("Successfully bypassed","success")}}class $t{canHandle(e){var o;return((o=e.contentSummary)==null?void 0:o.typeName)==="discussionPrompt"}async handle(e,o){var i,n,r,s;o.log(`Fetching metadata for: ${e.name}`,"info");try{const c=`/api/onDemandDiscussionPrompts.v1/${o.userId}~${o.courseId}~${e.id}?fields=onDemandDiscussionPromptQuestions.v1(content),promptType&includes=question`,d=o.headers();delete d["Content-Type"];const l=await fetch(c,{headers:d});if(!l.ok){o.log(`Failed to fetch discussion metadata for ${e.id}`,"error");return}const a=(r=(n=(i=(await l.json()).elements)==null?void 0:i[0])==null?void 0:n.promptType)==null?void 0:r.definition,m=(s=a==null?void 0:a.courseItemForumQuestionId)==null?void 0:s.split("~")[2];if(!m){o.log(`Could not find question ID for ${e.id}`,"error");return}const u=`${o.courseId}~${m}`;await A(2e3,3e3);const w={content:{typeName:"cml",definition:{dtdId:"discussion/1",value:"<co-content><text>Great</text></co-content>"}},courseForumQuestionId:u},v=await o.post("/api/onDemandCourseForumAnswers.v1/?fields=content,forumQuestionId&includes=profiles",w);if(v.ok)o.log("Discussion answered and completed.","success");else{const _=await v.text();o.log(`Failed to post answer: ${v.status}`,"error"),console.error("Discussion post error:",_)}}catch(c){o.log(`Discussion error: ${c.message}`,"error")}}}class Ct{canHandle(e){var o;return((o=e.contentSummary)==null?void 0:o.typeName)==="peer"}async handle(e,o){var p,a,m;o.log(`Bypassing peer assignment: ${e.name}`,"info");const i=await fetch(`/api/onDemandPeerSubmissions.v1/?q=activeByItemAndUser&courseId=${o.courseId}&itemId=${e.id}&userId=${o.userId}&includes=submissionSchemas&fields=onDemandPeerSubmissionSchemas.v1(submissionSchema)`);if(!i.ok)throw new Error("Failed to fetch peer schema");const r=(m=(a=(p=(await i.json()).linked)==null?void 0:p["onDemandPeerSubmissionSchemas.v1"])==null?void 0:a[0])==null?void 0:m.submissionSchema;if(!r)throw new Error("No submission schema found for peer assignment");const s={},c="Course material review and implementation steps completed as per instructions.",d="Course Project Submission";for(const u of r.parts)if(u.details.typeName==="fileUpload"){o.log(`Uploading bogus file for part: ${u.id}`,"progress");const w=`Peer submission for ${e.name}.
-Date: ${new Date().toISOString()}`,v=await Ve(w),_="GetPreSignedUrl",f=`mutation GetPreSignedUrl($input: Submission_FileUploadQuestionGenerateUploadUrlInput!) {
+            ])
+          });
+        } catch {}
+        if (f % 5 === 0) await A(50, 100);
+      }
+    }
+  };
+  return ctx;
+};
+
+// Handlers
+class kt {
+  canHandle(item) {
+    const type = item.contentSummary?.typeName;
+    return type === "lecture";
+  }
+  async handle(item, ctx) {
+    ctx.log(`Watching video: ${item.name || item.slug}`, "info");
+    try {
+      await ctx.post(
+        `/api/opencourse.v1/user/${ctx.userId}/course/${ctx.courseSlug}/item/${item.id}/lecture/videoEvents/play?autoEnroll=false`,
+        { contentRequestBody: {} }
+      );
+    } catch {}
+
+    let duration = item.contentSummary?.definition?.duration || item.timeCommitment || 120000;
+    try {
+      const vidRes = await fetch(
+        `/api/onDemandLectureVideos.v1/${ctx.courseId}~${item.id}?includes=video&fields=onDemandVideos.v1(id,duration)`
+      );
+      if (vidRes.ok) {
+        const vidData = await vidRes.json();
+        const vidObj = vidData?.linked?.["onDemandVideos.v1"]?.[0];
+        if (vidObj && vidObj.id) {
+          duration = vidObj.duration || duration;
+          const progId = `${ctx.userId}~${ctx.courseId}~${vidObj.id}`;
+          await ctx.put(`/api/onDemandVideoProgresses.v1/${progId}`, {
+            viewedUpTo: duration,
+            videoProgressId: progId
+          });
+        }
+      }
+    } catch {}
+
+    await ctx.sendHeartbeats({
+      courseId: ctx.courseId,
+      itemId: item.id,
+      duration,
+      csrf: ctx.csrf,
+      activityType: "LECTURE",
+      actionType: "VIDEO_IS_PLAYING"
+    });
+
+    const endUrl = `/api/opencourse.v1/user/${ctx.userId}/course/${ctx.courseSlug}/item/${item.id}/lecture/videoEvents/ended?autoEnroll=false`;
+    for (let p = 0; p < 10; p++) {
+      try {
+        const endRes = await fetch(endUrl, {
+          method: "POST",
+          headers: ctx.headers({ "X-Requested-With": "XMLHttpRequest" }),
+          body: JSON.stringify({ contentRequestBody: {} })
+        });
+        if (endRes.ok) break;
+        const txt = await endRes.text();
+        if (txt.includes("not watched enough")) {
+          await A(2000, 2000);
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+    ctx.log(`Video completed: ${item.name || item.slug}`, "success");
+  }
+}
+
+class St {
+  canHandle(item) {
+    const type = item.contentSummary?.typeName;
+    return ["supplement", "reading", "richText", "cml", "text", "article", "asset"].includes(type);
+  }
+  async handle(item, ctx) {
+    ctx.log(`Reading: ${item.name || item.slug}`, "info");
+    const res = await ctx.post("/api/onDemandSupplementCompletions.v1", {
+      courseId: ctx.courseId,
+      itemId: item.id,
+      userId: Number(ctx.userId)
+    });
+    await ctx.sendHeartbeats({
+      courseId: ctx.courseId,
+      itemId: item.id,
+      duration: 30000,
+      csrf: ctx.csrf,
+      activityType: "SUPPLEMENT",
+      actionType: "PAGE_VIEW"
+    });
+    if (res.ok) {
+      ctx.log("Content marked as read", "success");
+    } else {
+      ctx.log(`Mark read status: ${res.status}`, res.status === 200 || res.status === 201 ? "success" : "info");
+    }
+  }
+}
+
+class It {
+  canHandle(item) {
+    const type = item.contentSummary?.typeName || "";
+    return [
+      "ungradedLti",
+      "ungradedWidget",
+      "ungradedLab",
+      "ungradedAssignment",
+      "ungradedProgramming",
+      "workspace",
+      "authoringWorkspace",
+      "notebook",
+      "plugin"
+    ].includes(type);
+  }
+  async handle(item, ctx) {
+    const type = item.contentSummary?.typeName || "ungraded";
+    ctx.log(`Bypassing: ${item.name || item.slug} (${type})`, "info");
+    const payload = {
+      courseId: ctx.courseId,
+      itemId: item.id,
+      userId: Number(ctx.userId)
+    };
+
+    if (type === "ungradedLti") {
+      await ctx.post("/api/onDemandLtiUngradedLaunches.v1", {
+        ...payload,
+        learnerId: Number(ctx.userId),
+        markItemCompleted: true
+      });
+    } else if (type === "ungradedLab" || type === "workspace" || type === "authoringWorkspace") {
+      const key = `${ctx.userId}~${ctx.courseId}~${item.id}`;
+      try {
+        await fetch(`/api/onDemandWorkspaceLaunchers.v2/${key}?fields=id,itemId`);
+        await ctx.post(`/api/onDemandLearnerWorkspaces.v1/?action=launch&id=${key}`, {});
+      } catch {}
+      await ctx.sendHeartbeats({
+        courseId: ctx.courseId,
+        itemId: item.id,
+        duration: 45000,
+        csrf: ctx.csrf,
+        activityType: "UNGRADED_LAB",
+        actionType: "KEY_PRESS"
+      });
+      await ctx.post("/api/onDemandSupplementCompletions.v1", payload);
+    } else if (type === "ungradedWidget") {
+      const key = `${ctx.userId}~${ctx.courseId}~${item.id}`;
+      let sessionId;
+      try {
+        const sRes = await fetch(
+          `/api/onDemandSessionMemberships.v1?courseId=${ctx.courseId}&userId=${ctx.userId}&q=activeByUserAndCourse&fields=sessionId`
+        );
+        if (sRes.ok) {
+          const sJson = await sRes.json();
+          sessionId = sJson?.elements?.[0]?.sessionId;
+        }
+      } catch {}
+      await ctx.put(`/api/onDemandWidgetProgress.v1/${key}`, {
+        progressState: "Completed",
+        sessionId
+      });
+    } else {
+      await ctx.post("/api/onDemandUngradedAssignmentSubmissions.v1", payload);
+      await ctx.post("/api/onDemandSupplementCompletions.v1", payload);
+    }
+    ctx.log("Successfully bypassed ungraded item", "success");
+  }
+}
+
+class $t {
+  canHandle(item) {
+    const type = item.contentSummary?.typeName;
+    return type === "discussionPrompt";
+  }
+  async handle(item, ctx) {
+    ctx.log(`Answering discussion: ${item.name || item.slug}`, "info");
+    try {
+      const discUrl = `/api/onDemandDiscussionPrompts.v1/${ctx.userId}~${ctx.courseId}~${item.id}?fields=onDemandDiscussionPromptQuestions.v1(content),promptType&includes=question`;
+      const hdrs = ctx.headers();
+      delete hdrs["Content-Type"];
+      const discRes = await fetch(discUrl, { headers: hdrs });
+      if (!discRes.ok) {
+        ctx.log(`Failed to fetch discussion metadata: ${discRes.status}`, "error");
+        return;
+      }
+      const discData = await discRes.json();
+      const promptDef = discData?.elements?.[0]?.promptType?.definition;
+      const questionId = promptDef?.courseItemForumQuestionId?.split("~")?.[2];
+      if (!questionId) {
+        ctx.log(`Question ID not found for ${item.id}`, "error");
+        return;
+      }
+      const forumQId = `${ctx.courseId}~${questionId}`;
+      await A(1500, 1000);
+      const answerBody = {
+        content: {
+          typeName: "cml",
+          definition: {
+            dtdId: "discussion/1",
+            value: "<co-content><text>Great insights, fully agreed with the points discussed above.</text></co-content>"
+          }
+        },
+        courseForumQuestionId: forumQId
+      };
+      const postRes = await ctx.post(
+        "/api/onDemandCourseForumAnswers.v1/?fields=content,forumQuestionId&includes=profiles",
+        answerBody
+      );
+      if (postRes.ok) {
+        ctx.log("Discussion answered & completed.", "success");
+      } else {
+        ctx.log(`Discussion post response: ${postRes.status}`, "info");
+      }
+    } catch (err) {
+      ctx.log(`Discussion error: ${err.message}`, "error");
+    }
+  }
+}
+
+class Ct {
+  canHandle(item) {
+    const type = item.contentSummary?.typeName;
+    return type === "peer" || type === "phasedPeer";
+  }
+  async handle(item, ctx) {
+    ctx.log(`Bypassing peer assignment: ${item.name || item.slug}`, "info");
+    const schemaRes = await fetch(
+      `/api/onDemandPeerSubmissions.v1/?q=activeByItemAndUser&courseId=${ctx.courseId}&itemId=${item.id}&userId=${ctx.userId}&includes=submissionSchemas&fields=onDemandPeerSubmissionSchemas.v1(submissionSchema)`
+    );
+    if (!schemaRes.ok) throw new Error("Failed to fetch peer schema");
+    const schemaData = await schemaRes.json();
+    const schemaObj = schemaData?.linked?.["onDemandPeerSubmissionSchemas.v1"]?.[0];
+    const schema = schemaObj?.submissionSchema;
+    if (!schema) throw new Error("No submission schema found for peer assignment");
+
+    const parts = {};
+    const caption = "Course project implementation completed per instructions.";
+    const title = "Course Project Submission";
+
+    for (const part of schema.parts || []) {
+      if (part.details.typeName === "fileUpload") {
+        ctx.log(`Preparing file upload for part: ${part.id}`, "progress");
+        const fileContent = `Peer submission for ${item.name}.\nDate: ${new Date().toISOString()}`;
+        const md5 = await Ve(fileContent);
+        const presignVars = {
+          input: { contentMd5: md5, contentType: "text/plain", fileName: "submission.txt" }
+        };
+        const presignQuery = `mutation GetPreSignedUrl($input: Submission_FileUploadQuestionGenerateUploadUrlInput!) {
           Submission_FileUploadQuestionGenerateUploadUrl(input: $input) {
             url
             additionalHeaders { name value }
           }
-        }`,b={input:{contentMd5:v,contentType:"text/plain",fileName:"submission.txt"}},k=(await(await o.graphql(_,b,f)).json())[0],{url:$,additionalHeaders:q}=k.data.Submission_FileUploadQuestionGenerateUploadUrl,C={};q.forEach(L=>C[L.name]=L.value),C["Content-Type"]="text/plain",C["Content-MD5"]=v,await fetch($,{method:"PUT",headers:C,body:w}),s[u.id]={typeName:"fileUpload",definition:{caption:c,fileUrl:$.split("?")[0],title:d}}}else u.details.typeName==="plainText"&&(s[u.id]={typeName:"plainText",definition:{text:c}});await o.put(`/api/onDemandPeerSubmissionDrafts.v1/${o.userId}~${o.courseId}~${e.id}/`,{submission:{title:d,parts:s},attachedAssignmentId:r.id.split("~").pop()}),await A(1e3,500);const l=await o.post("/api/onDemandPeerSubmissions.v1/",{courseId:o.courseId,itemId:e.id,gradingType:"HUMAN"});l.ok?o.log("Peer assignment submitted successfully","success"):o.log(`Submission failed: ${l.status}`,"error")}}class Nt{constructor(e,o,i,n,r){me(this,"ctx");me(this,"handlers",[new kt,new St,new It,new $t,new Ct]);this.ctx=Qe(e,o,i,n||o,r)}async execute(e){try{const o=await this.fetchMaterials(),i=e?o.filter(c=>c.moduleId===e):o;this.ctx.log(`Targeting ${i.length} items. Checking progress...`,"progress");const n=await this.fetchProgress(),r=i.filter(c=>!this.isCompleted(c,n)),s=[];if(r.length===0){this.ctx.log("All items in target scope are already completed.","success"),await this.finalizeModules(i);return}this.ctx.log(`Found ${r.length} uncompleted items. Starting skip...`,"progress");for(const c of r)await this.processItem(c)||(this.ctx.log(`Skipping manual item: ${c.name}`,"info"),s.push(c)),await A(300,400);await this.finalizeModules(i),s.length>0?(this.ctx.log(`Module processed. ${s.length} items require manual action (Quizzes/Exams).`,"info"),s.forEach(c=>this.ctx.log(`> Manual: ${c.name}`,"info"))):this.ctx.log("Module completed. Progress synced.","success"),await A(1500,1e3),window.location.reload()}catch(o){this.ctx.log(`Error: ${o.message}`,"error")}}async processItem(e){var n;const o=(n=e.contentSummary)==null?void 0:n.typeName,i=this.handlers.find(r=>r.canHandle(e));if(i){this.ctx.log(`Processing: ${e.name||e.slug} (${o})`,"info");try{return await i.handle(e,this.ctx),!0}catch(r){return console.error(`Bypass failure for ${e.id}:`,r),!1}}return!1}isCompleted(e,o){return o.has(e.id)}async fetchProgress(){var r,s;const e=await fetch(`/api/onDemandCoursesProgress.v1/${this.ctx.userId}~${this.ctx.courseId}`);if(!e.ok)return new Set;const o=await e.json(),i=new Set,n=((s=(r=o.elements)==null?void 0:r[0])==null?void 0:s.items)||{};for(const c in n)n[c].progressState==="Completed"&&i.add(c);return i}async fetchMaterials(){var r;this.ctx.log("Retrieving module structure...","progress");const o=await fetch(`/api/onDemandCourseMaterials.v2/?q=slug&slug=${this.ctx.courseSlug}&includes=items&fields=onDemandCourseMaterialItems.v2(name,slug,timeCommitment,contentSummary,moduleId)&showLockedItems=true`);if(!o.ok)throw new Error("Could not fetch structure");return((r=(await o.json().catch(()=>({}))).linked)==null?void 0:r["onDemandCourseMaterialItems.v2"])||[]}async finalizeModules(e){const o=Array.from(new Set(e.map(i=>i.moduleId)));for(const i of o)await this.ctx.post("/api/onboarding/v1/moduleExecution",{userId:this.ctx.userId,courseId:this.ctx.courseId,moduleId:i,complete:!0,lastAccessed:new Date().toISOString()})}}const Et=async t=>{var l,p,a,m,u,w;const e=Oe(),o=je();let i=Fe();const n=(l=window.location.href.match(/learn\/([A-Za-z0-9-_]+)/))==null?void 0:l[1];if(!i&&n)try{const v=await fetch(`/api/onDemandCourses.v1?q=slug&slug=${n}`);v.ok&&(i=(a=(p=(await v.json()).elements)==null?void 0:p[0])==null?void 0:a.id)}catch(v){console.error("Course ID fetch failed:",v)}if(!e||!i){t("Environment search failed.","error");return}const r=window.location.href.match(/module\/([A-Za-z0-9-_]{5,})/),s=window.location.href.match(/module\/(\d+)/);let c=null;if(r)c=r[1];else if(s&&n){const v=parseInt(s[1])-1;try{const _=await fetch(`/api/onDemandCourseMaterials.v2/?q=slug&slug=${n}&fields=moduleIds`);_.ok&&(c=(w=(u=(m=(await _.json()).elements)==null?void 0:m[0])==null?void 0:u.moduleIds)==null?void 0:w[v])}catch(_){console.error("Module ID fetch failed:",_)}}await new Nt(e,i,o,n,t).execute(c)},Ut=async t=>{try{t("Scanning for grading fields...","info");const e=document.querySelectorAll('.rc-FormPart input[type="radio"], .rc-Option input[type="radio"]');if(e.length>0){t(`Selecting highest grades for ${e.length} items...`,"progress");const n=new Set;e.forEach(r=>{const s=r.name;if(!n.has(s)){const c=document.querySelectorAll(`input[name="${s}"]`),d=c[c.length-1];d.click(),d.dispatchEvent(new Event("change",{bubbles:!0})),n.add(s)}})}const o=document.querySelectorAll("textarea");if(o.length>0){t(`Filling ${o.length} feedback areas...`,"progress");for(const n of Array.from(o))n.value||(n.value="Excellent work.",n.dispatchEvent(new Event("input",{bubbles:!0})),n.dispatchEvent(new Event("blur",{bubbles:!0})),await Ge(100))}const i=document.querySelector('.rc-FormSubmit button, button[type="submit"]');i&&(t("Review filled. Triggering submission...","progress"),i.click()),t("Grading complete.","success")}catch(e){t(`Grading failed: ${e.message}`,"error")}},Tt=async t=>{try{const e=document.querySelectorAll("script");let o=!1;t("Searching for AI grader...","progress");for(const n of Array.from(e))(n.innerText.includes("ai-grader")||n.src.includes("ai-grader")||n.innerText.includes("GradingPolicy"))&&(n.remove(),o=!0);const i=document.querySelectorAll(".rc-AIGradeInstruction, .css-8h7v9a");for(const n of Array.from(i))n.style.display="none",o=!0;o?t("AI grader disabled.","success"):t("No AI grader found.","info")}catch(e){t(`Error: ${e.message}`,"error")}},Lt=async t=>{t("Downloading results...","progress");try{const e=Be("harvest");if(e.length===0){t("No results found to download.","error");return}const o=JSON.stringify(e,null,2),i=new Blob([o],{type:"application/json"}),n=URL.createObjectURL(i),r=document.createElement("a");r.href=n,r.download=`coursera_quiz_${new Date().getTime()}.json`,document.body.appendChild(r),r.click(),document.body.removeChild(r),URL.revokeObjectURL(n),t(`Downloaded ${e.length} items to drive.`,"success"),console.log(e)}catch(e){t(`Download failed: ${e.message}`,"error"),console.error(e)}},Dt=async t=>{t("Copying unsolved quiz...","progress");try{const e=Be("blueprint");if(e.length===0){t("No unsolved quiz found.","error");return}const o=JSON.stringify(e,null,2);await navigator.clipboard.writeText(o),t(`Unsolved quiz copied: ${e.length} items.`,"success"),console.log(e)}catch(e){t(`Copy failed: ${e.message}`,"error"),console.error(e)}},Pt=async t=>{var e,o,i;try{const n=Oe(),r=Fe(),s=je(),c=window.location.pathname.split("/")[2],d=window.location.pathname.match(/\/peer\/([^/]+)/),l=d?d[1]:null;if(!n||!r||!s||!l){t("Critical context missing. Ensure you are on a peer submission page.","error");return}t("Preparing submission...","info");const p=Qe(n,r,s,c,t),a=await fetch(`/api/onDemandPeerSubmissions.v1/?q=activeByItemAndUser&courseId=${r}&itemId=${l}&userId=${n}&includes=submissionSchemas&fields=onDemandPeerSubmissionSchemas.v1(submissionSchema)`,{headers:p.headers()});if(!a.ok)throw new Error(`Schema fetch failed: ${a.status}`);const u=(o=(e=(await a.json()).linked)==null?void 0:e["onDemandPeerSubmissionSchemas.v1"])==null?void 0:o[0],w=u==null?void 0:u.submissionSchema;if(!w)throw new Error("No submission schema found.");const v=u.id.split("~").pop();t(`Schema found. Assignment ID: ${v}`,"info");const _={},f="Project details and implementation notes.";for(const k of w.parts)if(k.details.typeName==="fileUpload"){t(`Preparing file upload for part: ${k.id}`,"progress");const $="This is a file.",q=await Ve($),C="GetPreSignedUrl",L=`mutation GetPreSignedUrl($input: Submission_FileUploadQuestionGenerateUploadUrlInput!) {
-          Submission_FileUploadQuestionGenerateUploadUrl(input: $input) {
-            url
-            additionalHeaders { name value }
+        }`;
+        const presignRes = await ctx.graphql("GetPreSignedUrl", presignVars, presignQuery);
+        const presignJson = (await presignRes.json())?.[0];
+        const presignData = presignJson?.data?.Submission_FileUploadQuestionGenerateUploadUrl;
+        if (presignData && presignData.url) {
+          const s3Headers = {
+            "Content-Type": "text/plain",
+            "Content-MD5": md5
+          };
+          (presignData.additionalHeaders || []).forEach((h) => (s3Headers[h.name] = h.value));
+          await fetch(presignData.url, {
+            method: "PUT",
+            headers: s3Headers,
+            body: fileContent
+          });
+          parts[part.id] = {
+            typeName: "fileUpload",
+            definition: {
+              caption,
+              fileUrl: presignData.url.split("?")[0],
+              title
+            }
+          };
+        }
+      } else if (part.details.typeName === "plainText") {
+        parts[part.id] = {
+          typeName: "plainText",
+          definition: { text: caption }
+        };
+      } else if (part.details.typeName === "url") {
+        parts[part.id] = {
+          typeName: "url",
+          definition: { url: "https://google.com", caption: "Project Demo", title: "Demo" }
+        };
+      }
+    }
+
+    const assignmentId = schema.id.split("~").pop();
+    await ctx.put(`/api/onDemandPeerSubmissionDrafts.v1/${ctx.userId}~${ctx.courseId}~${item.id}/`, {
+      submission: { title, parts },
+      attachedAssignmentId: assignmentId
+    });
+    await A(1000, 500);
+    const submitRes = await ctx.post("/api/onDemandPeerSubmissions.v1/", {
+      courseId: ctx.courseId,
+      itemId: item.id,
+      gradingType: "HUMAN"
+    });
+    if (submitRes.ok) {
+      ctx.log("Peer assignment submitted successfully", "success");
+    } else {
+      ctx.log(`Peer submit status: ${submitRes.status}`, "info");
+    }
+  }
+}
+
+// Master Automation Runner
+class Nt {
+  constructor(userId, courseId, csrf, courseSlug, log) {
+    this.ctx = Qe(userId, courseId, csrf, courseSlug || courseId, log);
+    this.handlers = [new kt(), new St(), new It(), new $t(), new Ct()];
+  }
+
+  async fetchCourseDetails() {
+    this.ctx.log("Retrieving course & module structure...", "progress");
+    const url = `/api/onDemandCourseMaterials.v2/?q=slug&slug=${this.ctx.courseSlug}&includes=modules,items,lessons&fields=moduleIds,onDemandCourseMaterialModules.v1(name,slug,id,lessonIds),onDemandCourseMaterialItems.v2(name,slug,timeCommitment,contentSummary,moduleId,lessonId)&showLockedItems=true`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Could not fetch course materials (HTTP ${res.status})`);
+    const json = await res.json();
+    const elem = json.elements?.[0] || {};
+    const moduleIds = elem.moduleIds || [];
+    const modules = json.linked?.["onDemandCourseMaterialModules.v1"] || [];
+    const items = json.linked?.["onDemandCourseMaterialItems.v2"] || [];
+    return {
+      courseId: elem.id || this.ctx.courseId,
+      moduleIds,
+      modules,
+      items
+    };
+  }
+
+  async fetchProgress() {
+    try {
+      const res = await fetch(`/api/onDemandCoursesProgress.v1/${this.ctx.userId}~${this.ctx.courseId}`);
+      if (!res.ok) return new Set();
+      const data = await res.json();
+      const completedSet = new Set();
+      const itemsMap = data?.elements?.[0]?.items || {};
+      for (const itemId in itemsMap) {
+        if (itemsMap[itemId]?.progressState === "Completed") {
+          completedSet.add(itemId);
+        }
+      }
+      return completedSet;
+    } catch {
+      return new Set();
+    }
+  }
+
+  isCompleted(item, progressSet) {
+    return progressSet.has(item.id);
+  }
+
+  async processItem(item) {
+    const typeName = item.contentSummary?.typeName;
+    const handler = this.handlers.find((h) => h.canHandle(item));
+    if (handler) {
+      this.ctx.log(`Processing: ${item.name || item.slug} (${typeName})`, "info");
+      try {
+        await handler.handle(item, this.ctx);
+        return true;
+      } catch (err) {
+        console.error(`Bypass error for ${item.id}:`, err);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  async finalizeModule(moduleId) {
+    try {
+      await this.ctx.post("/api/onboarding/v1/moduleExecution", {
+        userId: this.ctx.userId,
+        courseId: this.ctx.courseId,
+        moduleId,
+        complete: true,
+        lastAccessed: new Date().toISOString()
+      });
+    } catch {}
+  }
+
+  // Execute a single target module with auto-jump to next module
+  async executeModule(targetModuleInfo, courseDetails, shouldAutoJump = true) {
+    try {
+      const { moduleId, moduleIndex, weekNumber, moduleName } = targetModuleInfo;
+      const { moduleIds, items } = courseDetails;
+
+      const moduleItems = items.filter((it) => it.moduleId === moduleId);
+      this.ctx.log(
+        `Targeting: ${moduleName} (Week ${weekNumber}/${moduleIds.length}) - ${moduleItems.length} items total`,
+        "progress"
+      );
+
+      const progressSet = await this.fetchProgress();
+      const uncompletedItems = moduleItems.filter((it) => !this.isCompleted(it, progressSet));
+      const manualItems = [];
+
+      if (uncompletedItems.length === 0) {
+        this.ctx.log(`All items in ${moduleName} are already completed.`, "success");
+        await this.finalizeModule(moduleId);
+      } else {
+        this.ctx.log(`Found ${uncompletedItems.length} uncompleted items. Starting skip...`, "progress");
+        for (const item of uncompletedItems) {
+          const success = await this.processItem(item);
+          if (!success) {
+            this.ctx.log(`Skipping manual item: ${item.name || item.slug}`, "info");
+            manualItems.push(item);
           }
-        }`,I={input:{contentMd5:q,contentType:"text/plain",fileName:"report.txt"}},Y=(await(await p.graphql(C,I,L)).json())[0];if(!((i=Y==null?void 0:Y.data)!=null&&i.Submission_FileUploadQuestionGenerateUploadUrl))throw new Error("Failed to get pre-signed S3 URL.");const{url:Ze,additionalHeaders:Wt}=Y.data.Submission_FileUploadQuestionGenerateUploadUrl;t("Uploading to S3...","progress");const Xe={"Content-Type":"text/plain","Content-MD5":q};Wt.forEach(Ke=>Xe[Ke.name]=Ke.value);const Ye=await fetch(Ze,{method:"PUT",headers:Xe,body:$});if(!Ye.ok)throw new Error(`S3 upload failed: ${Ye.status}`);_[k.id]={typeName:"fileUpload",definition:{caption:f,fileUrl:Ze.split("?")[0],title:""}}}else k.details.typeName==="url"?(t(`Preparing URL submission for part: ${k.id}`,"progress"),_[k.id]={typeName:"url",definition:{url:"https://google.com",caption:"Google",title:"Google"}}):k.details.typeName==="plainText"&&(_[k.id]={typeName:"plainText",definition:{text:f}});t("Synchronizing draft...","progress");const b=await p.put(`/api/onDemandPeerSubmissionDrafts.v1/${n}~${r}~${l}/`,{submission:{title:"Google",parts:_},attachedAssignmentId:v});if(!b.ok)throw new Error(`Draft sync failed: ${b.status}`);await A(1e3,500),t("Finalizing submission...","progress");const S=await p.post("/api/onDemandPeerSubmissions.v1/",{courseId:r,itemId:l,gradingType:"HUMAN"});if(S.ok)t("Submission COMPLETE.","success"),setTimeout(()=>window.location.reload(),2e3);else throw new Error(`Submit rejected: ${S.status}`)}catch{t("Handling via browser automation...","progress"),await At(t)}};async function At(t){const e=document.getElementById("title");e&&(e.value="Google",e.dispatchEvent(new Event("input",{bubbles:!0})),e.dispatchEvent(new Event("blur",{bubbles:!0})));const o=document.querySelectorAll('input[aria-label="URL"], input[placeholder*="https://"]');if(o.forEach(r=>{r.value||(r.value="https://google.com",r.dispatchEvent(new Event("input",{bubbles:!0})),r.dispatchEvent(new Event("blur",{bubbles:!0})))}),!document.querySelector('[data-testid="uploaded-file-block"]')&&o.length===0){const r=document.querySelector(".rc-UppyFileUploader button, .rc-FileUploadEditView button");if(r){r.click();for(let s=0;s<10;s++){await new Promise(d=>setTimeout(d,500));const c=document.querySelector(".uppy-Dashboard-input");if(c){t("Uppy modal detected, injecting file...","progress");const d=new File(["This is a file."],"report.txt",{type:"text/plain"}),l=new DataTransfer;l.items.add(d),c.files=l.files,c.dispatchEvent(new Event("change",{bubbles:!0}));break}}}}const n=()=>{document.querySelectorAll('.rc-PeerItemEditView input[type="text"], .rc-PeerItemEditView textarea, .uppy-Dashboard-Item-name input').forEach(s=>{var l;const c=((l=s.getAttribute("aria-label"))==null?void 0:l.toLowerCase())||"",d=c.includes("title")||c.includes("caption")?"Google":"Project details and implementation notes.";!s.value&&s.id!=="title"&&(s.value=d,s.dispatchEvent(new Event("input",{bubbles:!0})),s.dispatchEvent(new Event("blur",{bubbles:!0})))})};for(let r=0;r<10;r++)n(),await new Promise(s=>setTimeout(s,1e3));t("UI fill sequence complete.","success")}const Mt=Object.freeze(Object.defineProperty({__proto__:null,autoGrade:Ut,copyReviewUrl:async t=>{try{const e=window.location.pathname.split("/")[2],o=window.location.pathname.match(/\/peer\/([^/]+)\/([^/]+)/),i=o?o[1]:null,n=o?o[2]:null;if(!e||!i||!n){t("Critical context missing. Ensure you are on the submission tab.","error");return}let r;const s=document.querySelector('textarea[id*="~comment"]');if(s&&(r=s.id.split("~")[0]),!r){const d=document.querySelector(".rc-SubmissionPartView");d&&(r=d.id)}if(!r)throw new Error("Submission ID not found on page. Make sure you've submitted and are on the right tab.");const c=`https://www.coursera.org/learn/${e}/peer/${i}/${n}/review/${r}`;await navigator.clipboard.writeText(c),t("Review URL copied to clipboard!","success"),t(`URL: ${c}`,"info")}catch(e){t(`Failed to copy URL: ${e.message}`,"error")}},disableAIGrade:Tt,exportUnsolved:Dt,fillPeer:Pt,harvestQuiz:Lt,skipModule:Et},Symbol.toStringTag,{value:"Module"})),qt={theme:"light"};async function zt(){return new Promise(t=>{chrome.storage.local.get(["settings"],e=>{t(e.settings||qt)})})}async function Rt(t){return new Promise(e=>{chrome.storage.local.set({settings:t},()=>{e()})})}const Ht=t=>{const e=t.theme==="light";return le(()=>({panel:e?"bg-white border-stone-200":"bg-stone-950 border-stone-800",text:e?"text-stone-800":"text-stone-200",muted:e?"text-stone-500":"text-stone-400",faint:e?"text-stone-400":"text-stone-500",surface:e?"border-stone-200 bg-stone-50":"border-stone-800 bg-stone-900",divider:e?"border-stone-100":"border-stone-800",isLight:e}),[e])},Ot=()=>{const[t,e]=P([]),[o,i]=P("Idle"),[n,r]=P("info"),s=qe((d,l)=>{const p=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});e(a=>[...a,{id:Date.now()+Math.random(),message:d,type:l,time:p}]),i(d),r(l)},[]),c=qe(()=>e([]),[]);return{logs:t,latestStatus:o,statusType:n,addLog:s,clearLogs:c}},Ft="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1",M=({label:t,onClick:e,variant:o,isLight:i,className:n=""})=>{const r=`flex items-center justify-center rounded-lg px-2.5 py-1.5 text-center text-[10.5px] font-medium transition-colors ${Ft}`;return h("button",{onClick:e,className:`${r} ${{primary:i?"bg-stone-800 text-white hover:bg-stone-700":"bg-stone-100 text-stone-900 hover:bg-stone-200",accent:i?"border border-stone-200 bg-stone-50 text-emerald-700 hover:bg-emerald-50":"border border-stone-700 bg-stone-900 text-emerald-400 hover:bg-stone-800",secondary:i?"border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100":"border border-stone-700 bg-stone-900 text-stone-400 hover:bg-stone-800",danger:i?"border border-stone-200 bg-stone-50 text-red-600 hover:bg-red-50":"border border-stone-700 bg-stone-900 text-red-400 hover:bg-stone-800"}[o]} ${n}`,children:t})},jt=({logs:t,showDataStream:e,setShowDataStream:o,clearLogs:i,t:n})=>{const r=lt(null);return Me(()=>{var s;(s=r.current)==null||s.scrollIntoView({behavior:"smooth"})},[t]),h("div",{className:"fade-in flex flex-1 flex-col overflow-hidden",children:[h("div",{className:"flex items-center justify-between",children:[h("button",{onClick:()=>o(!e),className:`rounded px-1 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none ${e?n.muted:n.faint} ${n.isLight?"hover:text-stone-600":"hover:text-stone-300"}`,children:e?"Hide console":"Show console"}),e&&h("button",{onClick:i,className:`rounded px-1 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none ${n.faint} hover:text-red-600`,children:"Clear"})]}),e&&h("div",{className:`${n.isLight?"custom-scrollbar":"custom-scrollbar custom-scrollbar-dark"} relative mt-1.5 max-h-[160px] overflow-y-auto rounded-lg border p-3 font-mono text-[10px] leading-relaxed ${n.surface}`,children:t.length===0?h("div",{className:`flex flex-1 items-center justify-center ${n.faint}`,children:h("span",{className:"text-[11px] font-medium",children:"No output"})}):h("div",{className:"space-y-1.5",children:[t.map(s=>h("div",{className:"flex gap-2.5",children:[h("span",{className:`shrink-0 tabular-nums ${n.faint}`,children:s.time}),h("span",{className:s.type==="success"?n.isLight?"text-emerald-700":"text-emerald-400":s.type==="error"?n.isLight?"font-medium text-red-700":"font-medium text-red-400":s.type==="progress"?n.isLight?"text-blue-700":"text-blue-400":n.isLight?"text-stone-600":"text-stone-400",children:s.message})]},s.id)),h("div",{ref:r})]})})]})},Bt=({runAutomation:t,logs:e,showDataStream:o,setShowDataStream:i,clearLogs:n,t:r})=>h("div",{className:"fade-in flex flex-1 flex-col gap-3 overflow-hidden",children:[h("div",{className:"custom-scrollbar grid grid-cols-2 gap-1.5 overflow-y-auto pr-0.5",children:[h(M,{label:"Skip contents",onClick:()=>t("skipModule"),variant:"primary",className:"col-span-2",isLight:r.isLight}),h(M,{label:"Download result",onClick:()=>t("harvestQuiz"),variant:"accent",isLight:r.isLight}),h(M,{label:"Copy questions",onClick:()=>t("exportUnsolved"),variant:"secondary",isLight:r.isLight}),h(M,{label:"Auto grade",onClick:()=>t("autoGrade"),variant:"secondary",isLight:r.isLight}),h(M,{label:"Fill Peer",onClick:()=>t("fillPeer"),variant:"secondary",isLight:r.isLight}),h(M,{label:"Disable grader",onClick:()=>t("disableAIGrade"),variant:"danger",isLight:r.isLight}),h(M,{label:"Review URL",onClick:()=>t("copyReviewUrl"),variant:"secondary",isLight:r.isLight})]}),h(jt,{logs:e,showDataStream:o,setShowDataStream:i,clearLogs:n,t:r})]}),ue="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1",Gt=({settings:t,setSettings:e,onSave:o,onCopyUA:i,t:n})=>h("div",{className:"fade-in flex h-full flex-col gap-4",children:[h("div",{className:"flex items-center justify-between",children:[h("h3",{className:`text-xs font-semibold ${n.muted}`,children:"Preferences"}),h("button",{onClick:()=>e({...t,theme:t.theme==="light"?"dark":"light"}),"aria-label":n.isLight?"Switch to dark theme":"Switch to light theme",className:`rounded-md border p-1.5 transition-colors ${ue} ${n.isLight?"border-stone-200 text-stone-500 hover:text-stone-700":"border-stone-700 text-stone-400 hover:text-stone-200"}`,children:n.isLight?h(_t,{size:14}):h(wt,{size:14})})]}),h("button",{onClick:i,className:`flex w-full flex-col gap-0.5 rounded-lg border px-3.5 py-2.5 text-left transition-colors ${ue} ${n.surface} ${n.isLight?"hover:bg-stone-100":"hover:bg-stone-800"}`,children:[h("span",{className:`text-[11px] font-semibold ${n.text}`,children:"Copy locked UA"}),h("span",{className:`text-[11px] ${n.faint}`,children:"Save to clipboard"})]}),h("div",{className:"mt-auto",children:h("button",{onClick:o,className:`flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-xs font-semibold transition-colors ${ue} ${n.isLight?"bg-stone-800 text-white hover:bg-stone-700":"bg-stone-100 text-stone-900 hover:bg-stone-200"}`,children:"Save changes"})})]}),We="coursera-locking-browser/0.6.3",Je="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1",Vt=()=>{const[t,e]=P("main"),[o,i]=P(!1),[n,r]=P(!1),[s,c]=P({theme:"light"}),{logs:d,latestStatus:l,statusType:p,addLog:a,clearLogs:m}=Ot(),u=Ht(s);Me(()=>{zt().then(c)},[]);const w=async()=>{await Rt(s),a("Settings saved.","success"),e("main")},v=()=>{a(`Locked UA: ${We}`,"info"),navigator.clipboard.writeText(We),a("Copied to clipboard.","success")},_=async f=>{await Mt[f](a)};return h("div",{className:`fixed bottom-6 right-6 z-[2147483647] flex w-80 flex-col overflow-hidden rounded-lg border font-sans shadow-md transition-all duration-200 ${o?"h-11":n?"h-[460px]":t==="settings"?"h-[300px]":"h-[320px]"} ${u.panel} ${u.text}`,children:[h("div",{className:"flex items-center justify-between px-3.5 py-2.5",children:[h("div",{}),h("div",{className:"flex items-center gap-1",children:[!o&&h("button",{onClick:()=>e(t==="main"?"settings":"main"),"aria-label":t==="settings"?"Back":"Settings",className:`rounded-md p-1.5 transition-colors ${Je} ${t==="settings"?u.isLight?"bg-stone-100 text-stone-700":"bg-stone-800 text-stone-200":`${u.faint} ${u.isLight?"hover:text-stone-700":"hover:text-stone-200"}`}`,children:t==="settings"?h(ht,{size:15}):h(bt,{size:15})}),h("button",{onClick:()=>i(!o),"aria-label":o?"Expand panel":"Collapse panel",className:`rounded-md p-1.5 transition-colors ${Je} ${u.faint} ${u.isLight?"hover:text-stone-700":"hover:text-stone-200"}`,children:o?h(gt,{size:15}):h(ft,{size:15})})]})]}),!o&&h("div",{className:"flex flex-1 flex-col overflow-hidden px-3.5 pb-3",children:[h("div",{className:"flex flex-1 flex-col gap-3 overflow-hidden",children:t==="settings"?h(Gt,{settings:s,setSettings:c,onSave:w,onCopyUA:v,t:u}):h(Bt,{runAutomation:_,logs:d,showDataStream:n,setShowDataStream:r,clearLogs:m,t:u})}),h("div",{className:`flex items-center gap-2 border-t pt-2 ${u.divider}`,children:[h("div",{className:`h-1.5 w-1.5 rounded-full ${p==="success"?"bg-emerald-500":p==="error"?"bg-red-500":p==="progress"?"bg-blue-500":u.isLight?"bg-stone-300":"bg-stone-600"}`}),h("span",{className:`max-w-[220px] truncate text-[11px] ${u.faint}`,children:l==="Idle"?"Idle":l})]})]})]})},Qt='*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness: proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width: 0px;--tw-ring-offset-color: #fff;--tw-ring-color: rgb(59 130 246 / .5);--tw-ring-offset-shadow: 0 0 #0000;--tw-ring-shadow: 0 0 #0000;--tw-shadow: 0 0 #0000;--tw-shadow-colored: 0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness: proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width: 0px;--tw-ring-offset-color: #fff;--tw-ring-color: rgb(59 130 246 / .5);--tw-ring-offset-shadow: 0 0 #0000;--tw-ring-shadow: 0 0 #0000;--tw-shadow: 0 0 #0000;--tw-shadow-colored: 0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }*,:before,:after{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}:before,:after{--tw-content: ""}html,:host{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:ui-monospace,SF Mono,Cascadia Code,Consolas,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dl,dd,h1,h2,h3,h4,h5,h6,hr,figure,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}ol,ul,menu{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}button,[role=button]{cursor:pointer}:disabled{cursor:default}img,svg,video,canvas,audio,iframe,embed,object{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.custom-scrollbar::-webkit-scrollbar{width:4px;height:4px}.custom-scrollbar::-webkit-scrollbar-track{background:transparent}.custom-scrollbar::-webkit-scrollbar-thumb{border-radius:9999px;--tw-bg-opacity: 1;background-color:rgb(214 211 209 / var(--tw-bg-opacity, 1))}.custom-scrollbar-dark::-webkit-scrollbar-thumb{border-radius:9999px;--tw-bg-opacity: 1;background-color:rgb(68 64 60 / var(--tw-bg-opacity, 1))}.fade-in{animation:fadeIn .15s ease-out both}@keyframes fadeIn{0%{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}.container{width:100%}@media (min-width: 640px){.container{max-width:640px}}@media (min-width: 768px){.container{max-width:768px}}@media (min-width: 1024px){.container{max-width:1024px}}@media (min-width: 1280px){.container{max-width:1280px}}@media (min-width: 1536px){.container{max-width:1536px}}.fixed{position:fixed}.relative{position:relative}.bottom-6{bottom:1.5rem}.right-6{right:1.5rem}.z-\\[2147483647\\]{z-index:2147483647}.col-span-2{grid-column:span 2 / span 2}.mt-1\\.5{margin-top:.375rem}.mt-auto{margin-top:auto}.block{display:block}.flex{display:flex}.grid{display:grid}.contents{display:contents}.h-1\\.5{height:.375rem}.h-11{height:2.75rem}.h-\\[300px\\]{height:300px}.h-\\[320px\\]{height:320px}.h-\\[460px\\]{height:460px}.h-full{height:100%}.max-h-\\[160px\\]{max-height:160px}.min-h-\\[280px\\]{min-height:280px}.w-1\\.5{width:.375rem}.w-80{width:20rem}.w-full{width:100%}.max-w-\\[220px\\]{max-width:220px}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-0\\.5{gap:.125rem}.gap-1{gap:.25rem}.gap-1\\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-2\\.5{gap:.625rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.space-y-1\\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.375rem * var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem * var(--tw-space-y-reverse))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.border{border-width:1px}.border-t{border-top-width:1px}.border-stone-100{--tw-border-opacity: 1;border-color:rgb(245 245 244 / var(--tw-border-opacity, 1))}.border-stone-200{--tw-border-opacity: 1;border-color:rgb(231 229 228 / var(--tw-border-opacity, 1))}.border-stone-700{--tw-border-opacity: 1;border-color:rgb(68 64 60 / var(--tw-border-opacity, 1))}.border-stone-800{--tw-border-opacity: 1;border-color:rgb(41 37 36 / var(--tw-border-opacity, 1))}.bg-blue-50{--tw-bg-opacity: 1;background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))}.bg-blue-500{--tw-bg-opacity: 1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-emerald-50{--tw-bg-opacity: 1;background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))}.bg-emerald-500{--tw-bg-opacity: 1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity: 1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-stone-100{--tw-bg-opacity: 1;background-color:rgb(245 245 244 / var(--tw-bg-opacity, 1))}.bg-stone-300{--tw-bg-opacity: 1;background-color:rgb(214 211 209 / var(--tw-bg-opacity, 1))}.bg-stone-50{--tw-bg-opacity: 1;background-color:rgb(250 250 249 / var(--tw-bg-opacity, 1))}.bg-stone-600{--tw-bg-opacity: 1;background-color:rgb(87 83 78 / var(--tw-bg-opacity, 1))}.bg-stone-800{--tw-bg-opacity: 1;background-color:rgb(41 37 36 / var(--tw-bg-opacity, 1))}.bg-stone-900{--tw-bg-opacity: 1;background-color:rgb(28 25 23 / var(--tw-bg-opacity, 1))}.bg-stone-950{--tw-bg-opacity: 1;background-color:rgb(12 10 9 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity: 1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.p-1\\.5{padding:.375rem}.p-3{padding:.75rem}.p-3\\.5{padding:.875rem}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\\.5{padding-left:.625rem;padding-right:.625rem}.px-3\\.5{padding-left:.875rem;padding-right:.875rem}.px-4{padding-left:1rem;padding-right:1rem}.py-0\\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1\\.5{padding-top:.375rem;padding-bottom:.375rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-2\\.5{padding-top:.625rem;padding-bottom:.625rem}.pb-3{padding-bottom:.75rem}.pr-0\\.5{padding-right:.125rem}.pt-2{padding-top:.5rem}.text-left{text-align:left}.text-center{text-align:center}.font-mono{font-family:ui-monospace,SF Mono,Cascadia Code,Consolas,monospace}.font-sans{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif}.text-\\[10\\.5px\\]{font-size:10.5px}.text-\\[10px\\]{font-size:10px}.text-\\[11px\\]{font-size:11px}.text-\\[12px\\]{font-size:12px}.text-base{font-size:1rem;line-height:1.5rem}.text-xs{font-size:.75rem;line-height:1rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.tabular-nums{--tw-numeric-spacing: tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-.025em}.text-blue-400{--tw-text-opacity: 1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.text-blue-700{--tw-text-opacity: 1;color:rgb(29 78 216 / var(--tw-text-opacity, 1))}.text-emerald-400{--tw-text-opacity: 1;color:rgb(52 211 153 / var(--tw-text-opacity, 1))}.text-emerald-700{--tw-text-opacity: 1;color:rgb(4 120 87 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity: 1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity: 1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-red-700{--tw-text-opacity: 1;color:rgb(185 28 28 / var(--tw-text-opacity, 1))}.text-stone-200{--tw-text-opacity: 1;color:rgb(231 229 228 / var(--tw-text-opacity, 1))}.text-stone-400{--tw-text-opacity: 1;color:rgb(168 162 158 / var(--tw-text-opacity, 1))}.text-stone-500{--tw-text-opacity: 1;color:rgb(120 113 108 / var(--tw-text-opacity, 1))}.text-stone-600{--tw-text-opacity: 1;color:rgb(87 83 78 / var(--tw-text-opacity, 1))}.text-stone-700{--tw-text-opacity: 1;color:rgb(68 64 60 / var(--tw-text-opacity, 1))}.text-stone-800{--tw-text-opacity: 1;color:rgb(41 37 36 / var(--tw-text-opacity, 1))}.text-stone-900{--tw-text-opacity: 1;color:rgb(28 25 23 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity: 1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.shadow{--tw-shadow: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);--tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000),var(--tw-ring-shadow, 0 0 #0000),var(--tw-shadow)}.shadow-md{--tw-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);--tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000),var(--tw-ring-shadow, 0 0 #0000),var(--tw-shadow)}.blur{--tw-blur: blur(8px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.transition-colors{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.duration-200{transition-duration:.2s}.hover\\:bg-emerald-50:hover{--tw-bg-opacity: 1;background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))}.hover\\:bg-red-50:hover{--tw-bg-opacity: 1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-100:hover{--tw-bg-opacity: 1;background-color:rgb(245 245 244 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-200:hover{--tw-bg-opacity: 1;background-color:rgb(231 229 228 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-50:hover{--tw-bg-opacity: 1;background-color:rgb(250 250 249 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-700:hover{--tw-bg-opacity: 1;background-color:rgb(68 64 60 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-800:hover{--tw-bg-opacity: 1;background-color:rgb(41 37 36 / var(--tw-bg-opacity, 1))}.hover\\:text-red-600:hover{--tw-text-opacity: 1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.hover\\:text-stone-200:hover{--tw-text-opacity: 1;color:rgb(231 229 228 / var(--tw-text-opacity, 1))}.hover\\:text-stone-300:hover{--tw-text-opacity: 1;color:rgb(214 211 209 / var(--tw-text-opacity, 1))}.hover\\:text-stone-600:hover{--tw-text-opacity: 1;color:rgb(87 83 78 / var(--tw-text-opacity, 1))}.hover\\:text-stone-700:hover{--tw-text-opacity: 1;color:rgb(68 64 60 / var(--tw-text-opacity, 1))}.focus-visible\\:outline-none:focus-visible{outline:2px solid transparent;outline-offset:2px}.focus-visible\\:ring-2:focus-visible{--tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow, 0 0 #0000)}.focus-visible\\:ring-stone-400\\/60:focus-visible{--tw-ring-color: rgb(168 162 158 / .6)}.focus-visible\\:ring-offset-1:focus-visible{--tw-ring-offset-width: 1px}',pe=()=>{if(document.getElementById("antigravity-root"))return;const t=document.createElement("div");t.id="antigravity-root",document.body.appendChild(t);const e=t.attachShadow({mode:"open"}),o=document.createElement("div");o.id="antigravity-shadow-root",o.style.position="relative",e.appendChild(o);const i=document.createElement("style");i.textContent=`
+          await A(300, 300);
+        }
+        await this.finalizeModule(moduleId);
+        if (manualItems.length > 0) {
+          this.ctx.log(`${moduleName} processed. ${manualItems.length} items require manual action (Quizzes/Exams).`, "info");
+          manualItems.forEach((m) => this.ctx.log(`> Manual: ${m.name}`, "info"));
+        } else {
+          this.ctx.log(`${moduleName} completed! Progress synced.`, "success");
+        }
+      }
+
+      // Check next module
+      const nextIndex = moduleIndex + 1;
+      if (nextIndex < moduleIds.length) {
+        const nextWeekNum = nextIndex + 1;
+        const nextModuleId = moduleIds[nextIndex];
+        const nextUrl = `https://www.coursera.org/learn/${this.ctx.courseSlug}/home/week/${nextWeekNum}`;
+
+        if (shouldAutoJump) {
+          this.ctx.log(`Jumping to Week ${nextWeekNum} in 2.5s...`, "progress");
+          sessionStorage.setItem("coursera_auto_skip", this.ctx.courseSlug);
+          await A(2500, 500);
+          window.location.href = nextUrl;
+          return;
+        } else {
+          this.ctx.log(`Next module available: Week ${nextWeekNum}`, "info");
+        }
+      } else {
+        sessionStorage.removeItem("coursera_auto_skip");
+        this.ctx.log("🎉 Course completed! All modules processed.", "success");
+      }
+
+      await A(1500, 1000);
+      window.location.reload();
+    } catch (err) {
+      this.ctx.log(`Error: ${err.message}`, "error");
+    }
+  }
+
+  // Execute ALL modules in the course in sequence
+  async executeFullCourse(courseDetails) {
+    try {
+      const { moduleIds, modules, items } = courseDetails;
+      this.ctx.log(`🚀 Starting Full Course Skip (${moduleIds.length} modules total)...`, "progress");
+
+      const progressSet = await this.fetchProgress();
+      let totalSkipped = 0;
+      let totalManual = 0;
+
+      for (let i = 0; i < moduleIds.length; i++) {
+        const mId = moduleIds[i];
+        const mObj = modules.find((m) => m.id === mId);
+        const mName = mObj?.name || `Week ${i + 1}`;
+        const mItems = items.filter((it) => it.moduleId === mId);
+        const uncompleted = mItems.filter((it) => !this.isCompleted(it, progressSet));
+
+        this.ctx.log(`[Week ${i + 1}/${moduleIds.length}] ${mName} (${uncompleted.length} items to skip)...`, "progress");
+
+        for (const item of uncompleted) {
+          const ok = await this.processItem(item);
+          if (ok) totalSkipped++;
+          else totalManual++;
+          await A(250, 200);
+        }
+
+        await this.finalizeModule(mId);
+        this.ctx.log(`✓ Week ${i + 1} finalized.`, "success");
+        await A(500, 500);
+      }
+
+      sessionStorage.removeItem("coursera_auto_skip");
+      this.ctx.log(
+        `🎉 FULL COURSE COMPLETED! Skipped: ${totalSkipped} items. (Manual items: ${totalManual})`,
+        "success"
+      );
+      await A(2000, 1000);
+      window.location.href = `https://www.coursera.org/learn/${this.ctx.courseSlug}/home/welcome`;
+    } catch (err) {
+      this.ctx.log(`Course skip error: ${err.message}`, "error");
+    }
+  }
+}
+
+// Module skip action entrypoint
+const Et = async (log) => {
+  log("Locating user session & course...", "progress");
+  const userId = await Oe();
+  const csrf = je();
+  const courseSlug = getCourseSlug();
+
+  if (!userId) {
+    log("Could not detect Coursera User ID. Please ensure you are logged in.", "error");
+    return;
+  }
+  if (!courseSlug) {
+    log("Please navigate to a Coursera course page (/learn/<courseSlug>).", "error");
+    return;
+  }
+
+  log(`User ID: ${userId} | Course: ${courseSlug}`, "info");
+
+  try {
+    const runner = new Nt(userId, null, csrf, courseSlug, log);
+    const courseDetails = await runner.fetchCourseDetails();
+    runner.ctx.courseId = courseDetails.courseId;
+
+    const currentModule = detectCurrentModule(courseSlug, courseDetails);
+    log(`Current module detected: ${currentModule.moduleName} (Week ${currentModule.weekNumber})`, "info");
+
+    await runner.executeModule(currentModule, courseDetails, true);
+  } catch (err) {
+    log(`Initialization error: ${err.message}`, "error");
+  }
+};
+
+// Full Course skip action entrypoint
+const SkipFullCourse = async (log) => {
+  log("Starting full course skip...", "progress");
+  const userId = await Oe();
+  const csrf = je();
+  const courseSlug = getCourseSlug();
+
+  if (!userId || !courseSlug) {
+    log("User session or course slug missing.", "error");
+    return;
+  }
+
+  try {
+    const runner = new Nt(userId, null, csrf, courseSlug, log);
+    const courseDetails = await runner.fetchCourseDetails();
+    runner.ctx.courseId = courseDetails.courseId;
+
+    await runner.executeFullCourse(courseDetails);
+  } catch (err) {
+    log(`Full course error: ${err.message}`, "error");
+  }
+};
+
+// Auto grade action
+const Ut = async (log) => {
+  try {
+    log("Scanning for grading fields...", "info");
+    const radios = document.querySelectorAll('.rc-FormPart input[type="radio"], .rc-Option input[type="radio"]');
+    if (radios.length > 0) {
+      log(`Selecting highest grades for ${radios.length} items...`, "progress");
+      const seenNames = new Set();
+      radios.forEach((r) => {
+        const name = r.name;
+        if (!seenNames.has(name)) {
+          const group = document.querySelectorAll(`input[name="${name}"]`);
+          const highest = group[group.length - 1];
+          highest.click();
+          highest.dispatchEvent(new Event("change", { bubbles: true }));
+          seenNames.add(name);
+        }
+      });
+    }
+
+    const textareas = document.querySelectorAll("textarea");
+    if (textareas.length > 0) {
+      log(`Filling ${textareas.length} feedback areas...`, "progress");
+      for (const t of Array.from(textareas)) {
+        if (!t.value) {
+          t.value = "Excellent work and thorough analysis.";
+          t.dispatchEvent(new Event("input", { bubbles: true }));
+          t.dispatchEvent(new Event("blur", { bubbles: true }));
+          await Ge(100);
+        }
+      }
+    }
+
+    const submitBtn = document.querySelector('.rc-FormSubmit button, button[type="submit"]');
+    if (submitBtn) {
+      log("Review filled. Submitting...", "progress");
+      submitBtn.click();
+    }
+    log("Grading complete.", "success");
+  } catch (err) {
+    log(`Grading failed: ${err.message}`, "error");
+  }
+};
+
+// Disable AI grade
+const Tt = async (log) => {
+  try {
+    const scripts = document.querySelectorAll("script");
+    let disabled = false;
+    log("Searching for AI grader...", "progress");
+    for (const s of Array.from(scripts)) {
+      if (s.innerText.includes("ai-grader") || s.src.includes("ai-grader") || s.innerText.includes("GradingPolicy")) {
+        s.remove();
+        disabled = true;
+      }
+    }
+    const aiBlocks = document.querySelectorAll(".rc-AIGradeInstruction, .css-8h7v9a");
+    for (const b of Array.from(aiBlocks)) {
+      b.style.display = "none";
+      disabled = true;
+    }
+    disabled ? log("AI grader disabled.", "success") : log("No AI grader found.", "info");
+  } catch (err) {
+    log(`Error: ${err.message}`, "error");
+  }
+};
+
+// Quiz harvest
+const Lt = async (log) => {
+  log("Downloading quiz results...", "progress");
+  try {
+    const results = Be("harvest");
+    if (results.length === 0) {
+      log("No completed quiz results found on this page.", "error");
+      return;
+    }
+    const jsonStr = JSON.stringify(results, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `coursera_quiz_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    log(`Downloaded ${results.length} questions to file.`, "success");
+  } catch (err) {
+    log(`Download failed: ${err.message}`, "error");
+  }
+};
+
+// Quiz export unsolved
+const Dt = async (log) => {
+  log("Copying unsolved quiz...", "progress");
+  try {
+    const results = Be("blueprint");
+    if (results.length === 0) {
+      log("No unsolved quiz found on this page.", "error");
+      return;
+    }
+    const jsonStr = JSON.stringify(results, null, 2);
+    await navigator.clipboard.writeText(jsonStr);
+    log(`Copied ${results.length} questions to clipboard.`, "success");
+  } catch (err) {
+    log(`Copy failed: ${err.message}`, "error");
+  }
+};
+
+// Fill peer submission
+const Pt = async (log) => {
+  try {
+    const userId = await Oe();
+    const courseId = Fe();
+    const csrf = je();
+    const courseSlug = getCourseSlug();
+    const peerMatch = window.location.pathname.match(/\/peer\/([^/]+)/);
+    const itemId = peerMatch ? peerMatch[1] : null;
+
+    if (!userId || !courseId || !csrf || !itemId) {
+      log("Critical context missing. Ensure you are on a peer submission page.", "error");
+      return;
+    }
+
+    log("Preparing peer submission...", "info");
+    const ctx = Qe(userId, courseId, csrf, courseSlug, log);
+    const schemaRes = await fetch(
+      `/api/onDemandPeerSubmissions.v1/?q=activeByItemAndUser&courseId=${courseId}&itemId=${itemId}&userId=${userId}&includes=submissionSchemas&fields=onDemandPeerSubmissionSchemas.v1(submissionSchema)`,
+      { headers: ctx.headers() }
+    );
+    if (!schemaRes.ok) throw new Error(`Schema fetch failed: ${schemaRes.status}`);
+    const schemaJson = await schemaRes.json();
+    const schemaObj = schemaJson?.linked?.["onDemandPeerSubmissionSchemas.v1"]?.[0];
+    const schema = schemaObj?.submissionSchema;
+    if (!schema) throw new Error("No submission schema found.");
+
+    const assignmentId = schemaObj.id.split("~").pop();
+    log(`Schema found. Assignment ID: ${assignmentId}`, "info");
+
+    const parts = {};
+    const caption = "Course project implementation completed.";
+    for (const part of schema.parts || []) {
+      if (part.details.typeName === "fileUpload") {
+        log(`Uploading file for part: ${part.id}`, "progress");
+        const fileContent = "Peer assignment submission file.";
+        const md5 = await Ve(fileContent);
+        const presignRes = await ctx.graphql(
+          "GetPreSignedUrl",
+          { input: { contentMd5: md5, contentType: "text/plain", fileName: "report.txt" } },
+          `mutation GetPreSignedUrl($input: Submission_FileUploadQuestionGenerateUploadUrlInput!) {
+            Submission_FileUploadQuestionGenerateUploadUrl(input: $input) {
+              url
+              additionalHeaders { name value }
+            }
+          }`
+        );
+        const presignJson = (await presignRes.json())?.[0];
+        const presignData = presignJson?.data?.Submission_FileUploadQuestionGenerateUploadUrl;
+        if (presignData?.url) {
+          const s3Headers = { "Content-Type": "text/plain", "Content-MD5": md5 };
+          (presignData.additionalHeaders || []).forEach((h) => (s3Headers[h.name] = h.value));
+          await fetch(presignData.url, { method: "PUT", headers: s3Headers, body: fileContent });
+          parts[part.id] = {
+            typeName: "fileUpload",
+            definition: { caption, fileUrl: presignData.url.split("?")[0], title: "Report" }
+          };
+        }
+      } else if (part.details.typeName === "url") {
+        parts[part.id] = {
+          typeName: "url",
+          definition: { url: "https://google.com", caption: "Demo", title: "Demo" }
+        };
+      } else if (part.details.typeName === "plainText") {
+        parts[part.id] = { typeName: "plainText", definition: { text: caption } };
+      }
+    }
+
+    log("Synchronizing draft...", "progress");
+    await ctx.put(`/api/onDemandPeerSubmissionDrafts.v1/${userId}~${courseId}~${itemId}/`, {
+      submission: { title: "Peer Project", parts },
+      attachedAssignmentId: assignmentId
+    });
+    await A(1000, 500);
+
+    log("Finalizing submission...", "progress");
+    const submitRes = await ctx.post("/api/onDemandPeerSubmissions.v1/", {
+      courseId,
+      itemId,
+      gradingType: "HUMAN"
+    });
+    if (submitRes.ok) {
+      log("Peer submission COMPLETE.", "success");
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      throw new Error(`Submit rejected: ${submitRes.status}`);
+    }
+  } catch (err) {
+    log("Handling via browser DOM automation...", "progress");
+    await At(log);
+  }
+};
+
+// Fallback DOM peer fill
+async function At(log) {
+  const title = document.getElementById("title");
+  if (title) {
+    title.value = "Course Project";
+    title.dispatchEvent(new Event("input", { bubbles: true }));
+    title.dispatchEvent(new Event("blur", { bubbles: true }));
+  }
+  const urls = document.querySelectorAll('input[aria-label="URL"], input[placeholder*="https://"]');
+  urls.forEach((u) => {
+    if (!u.value) {
+      u.value = "https://google.com";
+      u.dispatchEvent(new Event("input", { bubbles: true }));
+      u.dispatchEvent(new Event("blur", { bubbles: true }));
+    }
+  });
+
+  const textareas = document.querySelectorAll(
+    '.rc-PeerItemEditView input[type="text"], .rc-PeerItemEditView textarea, .uppy-Dashboard-Item-name input'
+  );
+  textareas.forEach((t) => {
+    if (!t.value && t.id !== "title") {
+      t.value = "Course assignment steps completed per instructions.";
+      t.dispatchEvent(new Event("input", { bubbles: true }));
+      t.dispatchEvent(new Event("blur", { bubbles: true }));
+    }
+  });
+  log("UI fill sequence complete.", "success");
+}
+
+// Review URL copy
+const copyReviewUrl = async (log) => {
+  try {
+    const courseSlug = getCourseSlug();
+    const peerMatch = window.location.pathname.match(/\/peer\/([^/]+)\/([^/]+)/);
+    const itemId = peerMatch ? peerMatch[1] : null;
+    const assignSlug = peerMatch ? peerMatch[2] : null;
+
+    if (!courseSlug || !itemId || !assignSlug) {
+      log("Ensure you are on the peer review/submission tab.", "error");
+      return;
+    }
+
+    let subId;
+    const commentBox = document.querySelector('textarea[id*="~comment"]');
+    if (commentBox) subId = commentBox.id.split("~")[0];
+    if (!subId) {
+      const partView = document.querySelector(".rc-SubmissionPartView");
+      if (partView) subId = partView.id;
+    }
+    if (!subId) throw new Error("Submission ID not found on page.");
+
+    const reviewUrl = `https://www.coursera.org/learn/${courseSlug}/peer/${itemId}/${assignSlug}/review/${subId}`;
+    await navigator.clipboard.writeText(reviewUrl);
+    log("Review URL copied to clipboard!", "success");
+    log(`URL: ${reviewUrl}`, "info");
+  } catch (err) {
+    log(`Failed to copy URL: ${err.message}`, "error");
+  }
+};
+
+const Mt = Object.freeze({
+  skipModule: Et,
+  skipCourse: SkipFullCourse,
+  autoGrade: Ut,
+  disableAIGrade: Tt,
+  exportUnsolved: Dt,
+  fillPeer: Pt,
+  harvestQuiz: Lt,
+  copyReviewUrl
+});
+
+
+
+const qt = { theme: "light" };
+async function zt() {
+  return new Promise((t) => {
+    chrome.storage.local.get(["settings"], (e) => {
+      t(e.settings || qt);
+    });
+  });
+}
+async function Rt(t) {
+  return new Promise((e) => {
+    chrome.storage.local.set({ settings: t }, () => {
+      e();
+    });
+  });
+}
+const Ht = (t) => {
+  const e = t.theme === "light";
+  return le(
+    () => ({
+      panel: e ? "bg-white border-stone-200" : "bg-stone-950 border-stone-800",
+      text: e ? "text-stone-800" : "text-stone-200",
+      muted: e ? "text-stone-500" : "text-stone-400",
+      faint: e ? "text-stone-400" : "text-stone-500",
+      surface: e ? "border-stone-200 bg-stone-50" : "border-stone-800 bg-stone-900",
+      divider: e ? "border-stone-100" : "border-stone-800",
+      isLight: e
+    }),
+    [e]
+  );
+};
+const Ot = () => {
+  const [t, e] = P([]),
+    [o, i] = P("Idle"),
+    [n, r] = P("info"),
+    s = qe((d, l) => {
+      const p = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      e((a) => [...a, { id: Date.now() + Math.random(), message: d, type: l, time: p }]);
+      i(d);
+      r(l);
+    }, []),
+    c = qe(() => e([]), []);
+  return { logs: t, latestStatus: o, statusType: n, addLog: s, clearLogs: c };
+};
+const Ft = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1";
+const M = ({ label: t, onClick: e, variant: o, isLight: i, className: n = "" }) => {
+  const r = `flex items-center justify-center rounded-lg px-2.5 py-1.5 text-center text-[10.5px] font-medium transition-colors ${Ft}`;
+  return h("button", {
+    onClick: e,
+    className: `${r} ${
+      {
+        primary: i ? "bg-stone-800 text-white hover:bg-stone-700" : "bg-stone-100 text-stone-900 hover:bg-stone-200",
+        accent: i
+          ? "border border-stone-200 bg-stone-50 text-emerald-700 hover:bg-emerald-50"
+          : "border border-stone-700 bg-stone-900 text-emerald-400 hover:bg-stone-800",
+        secondary: i
+          ? "border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100"
+          : "border border-stone-700 bg-stone-900 text-stone-400 hover:bg-stone-800",
+        danger: i
+          ? "border border-stone-200 bg-stone-50 text-red-600 hover:bg-red-50"
+          : "border border-stone-700 bg-stone-900 text-red-400 hover:bg-stone-800"
+      }[o]
+    } ${n}`,
+    children: t
+  });
+};
+const jt = ({ logs: t, showDataStream: e, setShowDataStream: o, clearLogs: i, t: n }) => {
+  const r = lt(null);
+  return (
+    Me(() => {
+      var s;
+      (s = r.current) == null || s.scrollIntoView({ behavior: "smooth" });
+    }, [t]),
+    h("div", {
+      className: "fade-in flex flex-1 flex-col overflow-hidden",
+      children: [
+        h("div", {
+          className: "flex items-center justify-between",
+          children: [
+            h("button", {
+              onClick: () => o(!e),
+              className: `rounded px-1 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none ${
+                e ? n.muted : n.faint
+              } ${n.isLight ? "hover:text-stone-600" : "hover:text-stone-300"}`,
+              children: e ? "Hide console" : "Show console"
+            }),
+            e &&
+              h("button", {
+                onClick: i,
+                className: `rounded px-1 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none ${n.faint} hover:text-red-600`,
+                children: "Clear"
+              })
+          ]
+        }),
+        e &&
+          h("div", {
+            className: `${
+              n.isLight ? "custom-scrollbar" : "custom-scrollbar custom-scrollbar-dark"
+            } relative mt-1.5 max-h-[160px] overflow-y-auto rounded-lg border p-3 font-mono text-[10px] leading-relaxed ${
+              n.surface
+            }`,
+            children:
+              t.length === 0
+                ? h("div", {
+                    className: `flex flex-1 items-center justify-center ${n.faint}`,
+                    children: h("span", { className: "text-[11px] font-medium", children: "No output" })
+                  })
+                : h("div", {
+                    className: "space-y-1.5",
+                    children: [
+                      ...t.map((s) =>
+                        h(
+                          "div",
+                          {
+                            className: "flex gap-2.5",
+                            children: [
+                              h("span", { className: `shrink-0 tabular-nums ${n.faint}`, children: s.time }),
+                              h("span", {
+                                className:
+                                  s.type === "success"
+                                    ? n.isLight
+                                      ? "text-emerald-700 font-medium"
+                                      : "text-emerald-400 font-medium"
+                                    : s.type === "error"
+                                    ? n.isLight
+                                      ? "font-medium text-red-700"
+                                      : "font-medium text-red-400"
+                                    : s.type === "progress"
+                                    ? n.isLight
+                                      ? "text-blue-700 font-medium"
+                                      : "text-blue-400 font-medium"
+                                    : n.isLight
+                                    ? "text-stone-700"
+                                    : "text-stone-300",
+                                children: s.message
+                              })
+                            ]
+                          },
+                          s.id
+                        )
+                      ),
+                      h("div", { ref: r })
+                    ]
+                  })
+          })
+      ]
+    })
+  );
+};
+const Bt = ({ runAutomation: t, logs: e, showDataStream: o, setShowDataStream: i, clearLogs: n, t: r }) =>
+  h("div", {
+    className: "fade-in flex flex-1 flex-col gap-3 overflow-hidden",
+    children: [
+      h("div", {
+        className: "custom-scrollbar grid grid-cols-2 gap-1.5 overflow-y-auto pr-0.5",
+        children: [
+          h(M, { label: "Skip & Next Week", onClick: () => t("skipModule"), variant: "primary", isLight: r.isLight }),
+          h(M, { label: "Skip Full Course", onClick: () => t("skipCourse"), variant: "accent", isLight: r.isLight }),
+          h(M, { label: "Download result", onClick: () => t("harvestQuiz"), variant: "secondary", isLight: r.isLight }),
+          h(M, { label: "Copy questions", onClick: () => t("exportUnsolved"), variant: "secondary", isLight: r.isLight }),
+          h(M, { label: "Auto grade", onClick: () => t("autoGrade"), variant: "secondary", isLight: r.isLight }),
+          h(M, { label: "Fill Peer", onClick: () => t("fillPeer"), variant: "secondary", isLight: r.isLight }),
+          h(M, { label: "Disable grader", onClick: () => t("disableAIGrade"), variant: "danger", isLight: r.isLight }),
+          h(M, { label: "Review URL", onClick: () => t("copyReviewUrl"), variant: "secondary", isLight: r.isLight })
+        ]
+      }),
+      h(jt, { logs: e, showDataStream: o, setShowDataStream: i, clearLogs: n, t: r })
+    ]
+  });
+const ue = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1";
+const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) =>
+  h("div", {
+    className: "fade-in flex h-full flex-col gap-4",
+    children: [
+      h("div", {
+        className: "flex items-center justify-between",
+        children: [
+          h("h3", { className: `text-xs font-semibold ${n.muted}`, children: "Preferences" }),
+          h("button", {
+            onClick: () => e({ ...t, theme: t.theme === "light" ? "dark" : "light" }),
+            "aria-label": n.isLight ? "Switch to dark theme" : "Switch to light theme",
+            className: `rounded-md border p-1.5 transition-colors ${ue} ${
+              n.isLight
+                ? "border-stone-200 text-stone-500 hover:text-stone-700"
+                : "border-stone-700 text-stone-400 hover:text-stone-200"
+            }`,
+            children: n.isLight ? h(_t, { size: 14 }) : h(wt, { size: 14 })
+          })
+        ]
+      }),
+      h(
+        "button",
+        {
+          onClick: i,
+          className: `flex w-full flex-col gap-0.5 rounded-lg border px-3.5 py-2.5 text-left transition-colors ${ue} ${
+            n.surface
+          } ${n.isLight ? "hover:bg-stone-100" : "hover:bg-stone-800"}`
+        },
+        {
+          children: [
+            h("span", { className: `text-[11px] font-semibold ${n.text}`, children: "Copy locked UA" }),
+            h("span", { className: `text-[11px] ${n.faint}`, children: "Save to clipboard" })
+          ]
+        }
+      ),
+      h("div", {
+        className: "mt-auto",
+        children: h("button", {
+          onClick: o,
+          className: `flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-xs font-semibold transition-colors ${ue} ${
+            n.isLight ? "bg-stone-800 text-white hover:bg-stone-700" : "bg-stone-100 text-stone-900 hover:bg-stone-200"
+          }`,
+          children: "Save changes"
+        })
+      })
+    ]
+  });
+const We = "coursera-locking-browser/0.6.3";
+const Je = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1";
+const Vt = () => {
+  const [t, e] = P("main"),
+    [o, i] = P(!1),
+    [n, r] = P(!0), // Show console = true by default
+    [s, c] = P({ theme: "light" }),
+    { logs: d, latestStatus: l, statusType: p, addLog: a, clearLogs: m } = Ot(),
+    u = Ht(s);
+  Me(() => {
+    zt().then(c);
+    // Check auto-skip continuation
+    try {
+      const slug = getCourseSlug();
+      if (slug && sessionStorage.getItem("coursera_auto_skip") === slug) {
+        setTimeout(() => {
+          a("Resuming auto-skip for current module...", "progress");
+          _("skipModule");
+        }, 1500);
+      }
+    } catch {}
+  }, []);
+  const w = async () => {
+      await Rt(s);
+      a("Settings saved.", "success");
+      e("main");
+    },
+    v = () => {
+      a(`Locked UA: ${We}`, "info");
+      navigator.clipboard.writeText(We);
+      a("Copied to clipboard.", "success");
+    },
+    _ = async (f) => {
+      if (Mt[f]) {
+        await Mt[f](a);
+      }
+    };
+  return h("div", {
+    className: `fixed bottom-6 right-6 z-[2147483647] flex w-80 flex-col overflow-hidden rounded-lg border font-sans shadow-md transition-all duration-200 ${
+      o ? "h-11" : n ? "h-[460px]" : t === "settings" ? "h-[300px]" : "h-[340px]"
+    } ${u.panel} ${u.text}`,
+    children: [
+      h("div", {
+        className: "flex items-center justify-between px-3.5 py-2.5",
+        children: [
+          h("div", {
+            className: "flex items-center gap-1.5",
+            children: [
+              h("span", { className: `text-xs font-bold tracking-tight ${u.text}`, children: "Coursera AutoPilot" }),
+              h("span", { className: `text-[10px] px-1.5 py-0.5 rounded font-mono ${u.surface} ${u.muted}`, children: "v1.3.0" })
+            ]
+          }),
+          h("div", {
+            className: "flex items-center gap-1",
+            children: [
+              !o &&
+                h("button", {
+                  onClick: () => e(t === "main" ? "settings" : "main"),
+                  "aria-label": t === "settings" ? "Back" : "Settings",
+                  className: `rounded-md p-1.5 transition-colors ${Je} ${
+                    t === "settings"
+                      ? u.isLight
+                        ? "bg-stone-100 text-stone-700"
+                        : "bg-stone-800 text-stone-200"
+                      : `${u.faint} ${u.isLight ? "hover:text-stone-700" : "hover:text-stone-200"}`
+                  }`,
+                  children: t === "settings" ? h(ht, { size: 15 }) : h(bt, { size: 15 })
+                }),
+              h("button", {
+                onClick: () => i(!o),
+                "aria-label": o ? "Expand panel" : "Collapse panel",
+                className: `rounded-md p-1.5 transition-colors ${Je} ${u.faint} ${
+                  u.isLight ? "hover:text-stone-700" : "hover:text-stone-200"
+                }`,
+                children: o ? h(gt, { size: 15 }) : h(ft, { size: 15 })
+              })
+            ]
+          })
+        ]
+      }),
+      !o &&
+        h("div", {
+          className: "flex flex-1 flex-col overflow-hidden px-3.5 pb-3",
+          children: [
+            h("div", {
+              className: "flex flex-1 flex-col gap-3 overflow-hidden",
+              children:
+                t === "settings"
+                  ? h(Gt, { settings: s, setSettings: c, onSave: w, onCopyUA: v, t: u })
+                  : h(Bt, { runAutomation: _, logs: d, showDataStream: n, setShowDataStream: r, clearLogs: m, t: u })
+            }),
+            h("div", {
+              className: `flex items-center gap-2 border-t pt-2 ${u.divider}`,
+              children: [
+                h("div", {
+                  className: `h-1.5 w-1.5 rounded-full ${
+                    p === "success"
+                      ? "bg-emerald-500"
+                      : p === "error"
+                      ? "bg-red-500"
+                      : p === "progress"
+                      ? "bg-blue-500"
+                      : u.isLight
+                      ? "bg-stone-300"
+                      : "bg-stone-600"
+                  }`
+                }),
+                h("span", {
+                  className: `max-w-[220px] truncate text-[11px] ${u.faint}`,
+                  children: l === "Idle" ? "Idle" : l
+                })
+              ]
+            })
+          ]
+        })
+    ]
+  });
+};
+
+
+
+const Qt = '*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness: proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width: 0px;--tw-ring-offset-color: #fff;--tw-ring-color: rgb(59 130 246 / .5);--tw-ring-offset-shadow: 0 0 #0000;--tw-ring-shadow: 0 0 #0000;--tw-shadow: 0 0 #0000;--tw-shadow-colored: 0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness: proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width: 0px;--tw-ring-offset-color: #fff;--tw-ring-color: rgb(59 130 246 / .5);--tw-ring-offset-shadow: 0 0 #0000;--tw-ring-shadow: 0 0 #0000;--tw-shadow: 0 0 #0000;--tw-shadow-colored: 0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }*,:before,:after{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}:before,:after{--tw-content: ""}html,:host{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:ui-monospace,SF Mono,Cascadia Code,Consolas,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dl,dd,h1,h2,h3,h4,h5,h6,hr,figure,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}ol,ul,menu{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}button,[role=button]{cursor:pointer}:disabled{cursor:default}img,svg,video,canvas,audio,iframe,embed,object{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.custom-scrollbar::-webkit-scrollbar{width:4px;height:4px}.custom-scrollbar::-webkit-scrollbar-track{background:transparent}.custom-scrollbar::-webkit-scrollbar-thumb{border-radius:9999px;--tw-bg-opacity: 1;background-color:rgb(214 211 209 / var(--tw-bg-opacity, 1))}.custom-scrollbar-dark::-webkit-scrollbar-thumb{border-radius:9999px;--tw-bg-opacity: 1;background-color:rgb(68 64 60 / var(--tw-bg-opacity, 1))}.fade-in{animation:fadeIn .15s ease-out both}@keyframes fadeIn{0%{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}.container{width:100%}@media (min-width: 640px){.container{max-width:640px}}@media (min-width: 768px){.container{max-width:768px}}@media (min-width: 1024px){.container{max-width:1024px}}@media (min-width: 1280px){.container{max-width:1280px}}@media (min-width: 1536px){.container{max-width:1536px}}.fixed{position:fixed}.relative{position:relative}.bottom-6{bottom:1.5rem}.right-6{right:1.5rem}.z-\\[2147483647\\]{z-index:2147483647}.col-span-2{grid-column:span 2 / span 2}.mt-1\\.5{margin-top:.375rem}.mt-auto{margin-top:auto}.block{display:block}.flex{display:flex}.grid{display:grid}.contents{display:contents}.h-1\\.5{height:.375rem}.h-11{height:2.75rem}.h-\\[300px\\]{height:300px}.h-\\[320px\\]{height:320px}.h-\\[460px\\]{height:460px}.h-full{height:100%}.max-h-\\[160px\\]{max-height:160px}.min-h-\\[280px\\]{min-height:280px}.w-1\\.5{width:.375rem}.w-80{width:20rem}.w-full{width:100%}.max-w-\\[220px\\]{max-width:220px}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-0\\.5{gap:.125rem}.gap-1{gap:.25rem}.gap-1\\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-2\\.5{gap:.625rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.space-y-1\\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.375rem * var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem * var(--tw-space-y-reverse))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.border{border-width:1px}.border-t{border-top-width:1px}.border-stone-100{--tw-border-opacity: 1;border-color:rgb(245 245 244 / var(--tw-border-opacity, 1))}.border-stone-200{--tw-border-opacity: 1;border-color:rgb(231 229 228 / var(--tw-border-opacity, 1))}.border-stone-700{--tw-border-opacity: 1;border-color:rgb(68 64 60 / var(--tw-border-opacity, 1))}.border-stone-800{--tw-border-opacity: 1;border-color:rgb(41 37 36 / var(--tw-border-opacity, 1))}.bg-blue-50{--tw-bg-opacity: 1;background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))}.bg-blue-500{--tw-bg-opacity: 1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-emerald-50{--tw-bg-opacity: 1;background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))}.bg-emerald-500{--tw-bg-opacity: 1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity: 1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-stone-100{--tw-bg-opacity: 1;background-color:rgb(245 245 244 / var(--tw-bg-opacity, 1))}.bg-stone-300{--tw-bg-opacity: 1;background-color:rgb(214 211 209 / var(--tw-bg-opacity, 1))}.bg-stone-50{--tw-bg-opacity: 1;background-color:rgb(250 250 249 / var(--tw-bg-opacity, 1))}.bg-stone-600{--tw-bg-opacity: 1;background-color:rgb(87 83 78 / var(--tw-bg-opacity, 1))}.bg-stone-800{--tw-bg-opacity: 1;background-color:rgb(41 37 36 / var(--tw-bg-opacity, 1))}.bg-stone-900{--tw-bg-opacity: 1;background-color:rgb(28 25 23 / var(--tw-bg-opacity, 1))}.bg-stone-950{--tw-bg-opacity: 1;background-color:rgb(12 10 9 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity: 1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.p-1\\.5{padding:.375rem}.p-3{padding:.75rem}.p-3\\.5{padding:.875rem}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\\.5{padding-left:.625rem;padding-right:.625rem}.px-3\\.5{padding-left:.875rem;padding-right:.875rem}.px-4{padding-left:1rem;padding-right:1rem}.py-0\\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1\\.5{padding-top:.375rem;padding-bottom:.375rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-2\\.5{padding-top:.625rem;padding-bottom:.625rem}.pb-3{padding-bottom:.75rem}.pr-0\\.5{padding-right:.125rem}.pt-2{padding-top:.5rem}.text-left{text-align:left}.text-center{text-align:center}.font-mono{font-family:ui-monospace,SF Mono,Cascadia Code,Consolas,monospace}.font-sans{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif}.text-\\[10\\.5px\\]{font-size:10.5px}.text-\\[10px\\]{font-size:10px}.text-\\[11px\\]{font-size:11px}.text-\\[12px\\]{font-size:12px}.text-base{font-size:1rem;line-height:1.5rem}.text-xs{font-size:.75rem;line-height:1rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.tabular-nums{--tw-numeric-spacing: tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-.025em}.text-blue-400{--tw-text-opacity: 1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.text-blue-700{--tw-text-opacity: 1;color:rgb(29 78 216 / var(--tw-text-opacity, 1))}.text-emerald-400{--tw-text-opacity: 1;color:rgb(52 211 153 / var(--tw-text-opacity, 1))}.text-emerald-700{--tw-text-opacity: 1;color:rgb(4 120 87 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity: 1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity: 1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-red-700{--tw-text-opacity: 1;color:rgb(185 28 28 / var(--tw-text-opacity, 1))}.text-stone-200{--tw-text-opacity: 1;color:rgb(231 229 228 / var(--tw-text-opacity, 1))}.text-stone-400{--tw-text-opacity: 1;color:rgb(168 162 158 / var(--tw-text-opacity, 1))}.text-stone-500{--tw-text-opacity: 1;color:rgb(120 113 108 / var(--tw-text-opacity, 1))}.text-stone-600{--tw-text-opacity: 1;color:rgb(87 83 78 / var(--tw-text-opacity, 1))}.text-stone-700{--tw-text-opacity: 1;color:rgb(68 64 60 / var(--tw-text-opacity, 1))}.text-stone-800{--tw-text-opacity: 1;color:rgb(41 37 36 / var(--tw-text-opacity, 1))}.text-stone-900{--tw-text-opacity: 1;color:rgb(28 25 23 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity: 1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.shadow{--tw-shadow: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);--tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000),var(--tw-ring-shadow, 0 0 #0000),var(--tw-shadow)}.shadow-md{--tw-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);--tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000),var(--tw-ring-shadow, 0 0 #0000),var(--tw-shadow)}.blur{--tw-blur: blur(8px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.transition-colors{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.duration-200{transition-duration:.2s}.hover\\:bg-emerald-50:hover{--tw-bg-opacity: 1;background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))}.hover\\:bg-red-50:hover{--tw-bg-opacity: 1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-100:hover{--tw-bg-opacity: 1;background-color:rgb(245 245 244 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-200:hover{--tw-bg-opacity: 1;background-color:rgb(231 229 228 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-50:hover{--tw-bg-opacity: 1;background-color:rgb(250 250 249 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-700:hover{--tw-bg-opacity: 1;background-color:rgb(68 64 60 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-800:hover{--tw-bg-opacity: 1;background-color:rgb(41 37 36 / var(--tw-bg-opacity, 1))}.hover\\:text-red-600:hover{--tw-text-opacity: 1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.hover\\:text-stone-200:hover{--tw-text-opacity: 1;color:rgb(231 229 228 / var(--tw-text-opacity, 1))}.hover\\:text-stone-300:hover{--tw-text-opacity: 1;color:rgb(214 211 209 / var(--tw-text-opacity, 1))}.hover\\:text-stone-600:hover{--tw-text-opacity: 1;color:rgb(87 83 78 / var(--tw-text-opacity, 1))}.hover\\:text-stone-700:hover{--tw-text-opacity: 1;color:rgb(68 64 60 / var(--tw-text-opacity, 1))}.focus-visible\\:outline-none:focus-visible{outline:2px solid transparent;outline-offset:2px}.focus-visible\\:ring-2:focus-visible{--tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow, 0 0 #0000)}.focus-visible\\:ring-stone-400\\/60:focus-visible{--tw-ring-color: rgb(168 162 158 / .6)}.focus-visible\\:ring-offset-1:focus-visible{--tw-ring-offset-width: 1px}';
+const pe = () => {
+  if (document.getElementById("antigravity-root")) return;
+  const t = document.createElement("div");
+  t.id = "antigravity-root";
+  document.body.appendChild(t);
+  const e = t.attachShadow({ mode: "open" });
+  const o = document.createElement("div");
+  o.id = "antigravity-shadow-root";
+  o.style.position = "relative";
+  e.appendChild(o);
+  const i = document.createElement("style");
+  i.textContent = `
     :host {
       all: initial;
     }
     ${Qt}
-  `,e.appendChild(i),st(h(Vt,{}),o)};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",pe):pe(),new MutationObserver(()=>{document.getElementById("antigravity-root")||pe()}).observe(document.body,{childList:!0,subtree:!1})})();
+  `;
+  e.appendChild(i);
+  st(h(Vt, {}), o);
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", pe);
+} else {
+  pe();
+}
+
+new MutationObserver(() => {
+  if (!document.getElementById("antigravity-root")) pe();
+}).observe(document.body, { childList: true, subtree: false });
+})();

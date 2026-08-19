@@ -16,6 +16,7 @@ a.txt
 dapan.txt
 dapan_EN.txt
 
-# OS
+# OS & Backups
 .DS_Store
 Thumbs.db
+* copy/
