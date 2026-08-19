@@ -8,7 +8,7 @@ Tổng hợp các công cụ tự động hóa, giải bài tập AI và điều
 
 | Thư mục | Tên Tool | Nền tảng | Chức năng chính |
 | :--- | :--- | :---: | :--- |
-| **[`tool-cousera/`](./tool-cousera/README.md)** | **Coursera AutoPilot Pro** | Chrome / Firefox Extension | Tự động skip Video, Reading, Labs, Discussions; Tự động nhảy tuần; Skip 1-Click toàn khóa; Hỗ trợ Peer Review. |
+| **[`tool-cousera/`](./tool-cousera/README.md)** | **Coursera AutoPilot Pro** | Chrome / Firefox Extension | Tự động giải & click đáp án Quiz bằng Gemini AI; Tự động skip Video, Reading, Labs, Discussions; Tự động nhảy tuần; Skip toàn khóa 1-Click. |
 | **[`quiz-led-solver/`](./quiz-led-solver/README.md)** | **Quiz LED Solver** | Python CLI (Linux) | Tự động quét ảnh chụp màn hình câu hỏi, gọi Vision AI giải đáp án và báo tín hiệu bằng nháy đèn bàn phím (Caps Lock LED). |
 | **[`tool-auto-write/`](./tool-auto-write/README.md)** | **Tool Auto Write** | Bash / Python (`ydotool`) | Tự động gõ nội dung văn bản/code từ file vào các cửa sổ máy ảo VM, trình duyệt chống paste. |
 | **[`firefox-video-control/`](./firefox-video-control/README.md)** | **LevelUp Video Control** | Firefox Extension | Điều khiển phát video, tăng tốc 1.5x/2x/4x, tự động chuyển tab khi video kết thúc trên nền tảng LevelUp Akajob. |

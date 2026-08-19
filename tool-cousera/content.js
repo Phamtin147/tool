@@ -40,6 +40,8 @@ var Jt=Object.defineProperty;var Zt=(N,g,D)=>g in N?Jt(N,g,{enumerable:!0,config
  * See the LICENSE file in the root directory of this source tree.
  */const wt=H("Sun",[["circle",{cx:"12",cy:"12",r:"4",key:"4exip2"}],["path",{d:"M12 2v2",key:"tus03m"}],["path",{d:"M12 20v2",key:"1lh1kg"}],["path",{d:"m4.93 4.93 1.41 1.41",key:"149t6j"}],["path",{d:"m17.66 17.66 1.41 1.41",key:"ptbguv"}],["path",{d:"M2 12h2",key:"1t8f8n"}],["path",{d:"M20 12h2",key:"1q8mjw"}],["path",{d:"m6.34 17.66-1.41 1.41",key:"1m8zz5"}],["path",{d:"m19.07 4.93-1.41 1.41",key:"1shlcs"}]]);
 
+// Logic module for Coursera AutoPilot with Gemini AI Quiz Solver
+
 const U = {
   QUIZ_CONTAINER: ".css-1erl2aq, .rc-FormPartsQuestion",
   POINTS: '[data-testid="part-points"]',
@@ -243,6 +245,101 @@ function Be(mode) {
     }
   });
   return results;
+}
+
+// Module and course detection
+function detectCurrentModule(courseSlug, courseDetails) {
+  const { moduleIds, modules, items } = courseDetails;
+  const href = window.location.href;
+  const path = window.location.pathname;
+
+  const weekMatch = href.match(/\/week[s]?\/(\d+)/i) || path.match(/\/week[s]?\/(\d+)/i);
+  if (weekMatch) {
+    const weekNum = parseInt(weekMatch[1], 10);
+    const index = weekNum - 1;
+    if (index >= 0 && index < moduleIds.length) {
+      return {
+        moduleId: moduleIds[index],
+        moduleIndex: index,
+        weekNumber: weekNum,
+        moduleName: modules.find((m) => m.id === moduleIds[index])?.name || `Week ${weekNum}`
+      };
+    }
+  }
+
+  const modNumMatch = href.match(/\/module[s]?\/(\d+)/i) || path.match(/\/module[s]?\/(\d+)/i);
+  if (modNumMatch) {
+    const modNum = parseInt(modNumMatch[1], 10);
+    const index = modNum - 1;
+    if (index >= 0 && index < moduleIds.length) {
+      return {
+        moduleId: moduleIds[index],
+        moduleIndex: index,
+        weekNumber: modNum,
+        moduleName: modules.find((m) => m.id === moduleIds[index])?.name || `Module ${modNum}`
+      };
+    }
+  }
+
+  const modIdMatch = href.match(/\/module\/([A-Za-z0-9-_]{5,})/i);
+  if (modIdMatch) {
+    const mId = modIdMatch[1];
+    const index = moduleIds.indexOf(mId);
+    if (index !== -1) {
+      return {
+        moduleId: mId,
+        moduleIndex: index,
+        weekNumber: index + 1,
+        moduleName: modules.find((m) => m.id === mId)?.name || `Module ${index + 1}`
+      };
+    }
+    const foundBySlug = modules.find((m) => m.slug === mId || m.id === mId);
+    if (foundBySlug) {
+      const idx = moduleIds.indexOf(foundBySlug.id);
+      return {
+        moduleId: foundBySlug.id,
+        moduleIndex: idx !== -1 ? idx : 0,
+        weekNumber: (idx !== -1 ? idx : 0) + 1,
+        moduleName: foundBySlug.name
+      };
+    }
+  }
+
+  const itemMatch = href.match(/\/(lecture|supplement|graded-quiz|exam|ungraded-widget|item|peer)\/([A-Za-z0-9-_]+)/i);
+  if (itemMatch) {
+    const itemIdentifier = itemMatch[2];
+    const foundItem = items.find((it) => it.id === itemIdentifier || it.slug === itemIdentifier);
+    if (foundItem && foundItem.moduleId) {
+      const index = moduleIds.indexOf(foundItem.moduleId);
+      return {
+        moduleId: foundItem.moduleId,
+        moduleIndex: index !== -1 ? index : 0,
+        weekNumber: (index !== -1 ? index : 0) + 1,
+        moduleName: modules.find((m) => m.id === foundItem.moduleId)?.name || `Week ${(index !== -1 ? index : 0) + 1}`
+      };
+    }
+  }
+
+  const urlParams = new URL(href).searchParams;
+  if (urlParams.get("moduleId")) {
+    const mId = urlParams.get("moduleId");
+    const index = moduleIds.indexOf(mId);
+    if (index !== -1) {
+      return {
+        moduleId: mId,
+        moduleIndex: index,
+        weekNumber: index + 1,
+        moduleName: modules.find((m) => m.id === mId)?.name || `Week ${index + 1}`
+      };
+    }
+  }
+
+  return {
+    moduleId: moduleIds[0] || null,
+    moduleIndex: 0,
+    weekNumber: 1,
+    moduleName: modules[0]?.name || "Week 1"
+  };
 }
 
 // Context builder
@@ -708,7 +805,6 @@ class Nt {
     } catch {}
   }
 
-  // Execute a single target module with auto-jump to next module
   async executeModule(targetModuleInfo, courseDetails, shouldAutoJump = true) {
     try {
       const { moduleId, moduleIndex, weekNumber, moduleName } = targetModuleInfo;
@@ -746,11 +842,9 @@ class Nt {
         }
       }
 
-      // Check next module
       const nextIndex = moduleIndex + 1;
       if (nextIndex < moduleIds.length) {
         const nextWeekNum = nextIndex + 1;
-        const nextModuleId = moduleIds[nextIndex];
         const nextUrl = `https://www.coursera.org/learn/${this.ctx.courseSlug}/home/week/${nextWeekNum}`;
 
         if (shouldAutoJump) {
@@ -774,7 +868,6 @@ class Nt {
     }
   }
 
-  // Execute ALL modules in the course in sequence
   async executeFullCourse(courseDetails) {
     try {
       const { moduleIds, modules, items } = courseDetails;
@@ -871,6 +964,229 @@ const SkipFullCourse = async (log) => {
   } catch (err) {
     log(`Full course error: ${err.message}`, "error");
   }
+};
+
+// ==========================================
+// 🧠 GEMINI AI QUIZ SOLVER IMPLEMENTATION
+// ==========================================
+
+async function queryGeminiApi(prompt, apiKey) {
+  const models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1 }
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        lastError = new Error(`HTTP ${res.status}: ${errText}`);
+        continue;
+      }
+
+      const json = await res.json();
+      const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("Gemini API request failed on all models.");
+}
+
+function parseGeminiQuizResponse(responseText, totalChoices) {
+  try {
+    const cleaned = responseText.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*?\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.correct_indices)) {
+        const filtered = parsed.correct_indices.map(Number).filter((n) => n >= 1 && n <= totalChoices);
+        if (filtered.length > 0) return filtered;
+      }
+    }
+  } catch {}
+
+  const letterMap = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8 };
+  const letters = [];
+  const m = responseText.match(/\b([A-H])\b/g);
+  if (m) {
+    m.forEach((l) => {
+      const num = letterMap[l.toUpperCase()];
+      if (num && num <= totalChoices && !letters.includes(num)) letters.push(num);
+    });
+    if (letters.length > 0) return letters;
+  }
+
+  const digitMatches = responseText.match(/\b\d+\b/g);
+  if (digitMatches) {
+    const digits = Array.from(new Set(digitMatches.map(Number))).filter((n) => n >= 1 && n <= totalChoices);
+    if (digits.length > 0) return digits;
+  }
+
+  return [];
+}
+
+const solveQuizWithGemini = async (log) => {
+  log("Scanning quiz questions on page...", "progress");
+
+  const settings = await zt();
+  let apiKey = settings.geminiApiKey;
+  if (!apiKey || apiKey.trim() === "") {
+    log("Gemini API Key missing! Click ⚙️ (Settings) to enter your API Key.", "error");
+    return;
+  }
+  apiKey = apiKey.trim();
+
+  // Find all question containers
+  const containerSelectors = [
+    ".rc-FormPartsQuestion",
+    ".rc-QuizQuestion",
+    '[data-testid="part-container"]',
+    'div[class*="FormPartsQuestion"]',
+    ".css-1erl2aq",
+    'div[id^="question-"]'
+  ];
+  const allContainers = Array.from(document.querySelectorAll(containerSelectors.join(", ")));
+  const validContainers = [];
+
+  allContainers.forEach((c) => {
+    const inputs = c.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+    if (inputs.length > 0 && !validContainers.includes(c)) {
+      validContainers.push(c);
+    }
+  });
+
+  if (validContainers.length === 0) {
+    log("No quiz questions found. Ensure you are on an active Quiz/Exam page.", "error");
+    return;
+  }
+
+  log(`Found ${validContainers.length} questions. Starting AI solving...`, "progress");
+  let solvedCount = 0;
+
+  for (let qIdx = 0; qIdx < validContainers.length; qIdx++) {
+    const container = validContainers[qIdx];
+    const qNumber = qIdx + 1;
+
+    // 1. Question Text
+    const qBody =
+      container.querySelector(U.QUESTION_BODY) ||
+      container.querySelector(U.CML_CONTENT) ||
+      container.querySelector('[data-testid="question-prompt"]');
+    let questionText = qBody ? qBody.innerText.trim() : container.innerText.split("\n")[0];
+    questionText = questionText.replace(/^\d+\.\nQuestion \d+\n\n/, "").replace(/^Question \d+\n+/, "").trim();
+
+    // 2. Choices extraction
+    const optionWrappers = container.querySelectorAll(
+      U.OPTION_WRAPPER +
+        ", .cds-checkboxAndRadio-label, label[class*='checkboxAndRadio'], .rc-FormOption, div[class*='Option'], label.rc-Option"
+    );
+
+    const choicesData = [];
+    optionWrappers.forEach((opt, oIdx) => {
+      const labelEl =
+        opt.querySelector(U.CHOICE_LABEL) ||
+        opt.querySelector(".rc-CML") ||
+        opt.querySelector(".cds-checkboxAndRadio-labelText") ||
+        opt.querySelector("span");
+      const choiceText = labelEl ? labelEl.innerText.trim() : opt.innerText.trim();
+      const inputEl =
+        opt.querySelector('input[type="radio"], input[type="checkbox"]') ||
+        opt.closest("label")?.querySelector("input") ||
+        opt.parentElement?.querySelector("input");
+
+      if (choiceText && (inputEl || opt)) {
+        choicesData.push({
+          index: oIdx + 1,
+          text: choiceText,
+          wrapper: opt,
+          input: inputEl
+        });
+      }
+    });
+
+    // Fallback: direct inputs
+    if (choicesData.length === 0) {
+      const directInputs = container.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+      directInputs.forEach((inp, oIdx) => {
+        const parentLabel = inp.closest("label") || inp.parentElement;
+        const text = parentLabel ? parentLabel.innerText.trim() : `Option ${oIdx + 1}`;
+        choicesData.push({
+          index: oIdx + 1,
+          text,
+          wrapper: parentLabel || inp,
+          input: inp
+        });
+      });
+    }
+
+    if (choicesData.length === 0) {
+      log(`[${qNumber}/${validContainers.length}] Could not extract choices. Skipping.`, "info");
+      continue;
+    }
+
+    const shortQ = questionText.length > 40 ? questionText.slice(0, 40) + "..." : questionText;
+    log(`[${qNumber}/${validContainers.length}] AI solving: "${shortQ}"`, "progress");
+
+    try {
+      const prompt = `You are an expert AI quiz solver. Solve this multiple-choice quiz question.
+
+Question:
+${questionText}
+
+Choices:
+${choicesData.map((c) => `${c.index}. ${c.text}`).join("\n")}
+
+Respond ONLY in valid JSON format:
+{"correct_indices": [1]} (for single choice) or {"correct_indices": [1, 3]} (for multi-select)
+where numbers represent the 1-based index of the correct choices above. Do not include markdown or extra explanations.`;
+
+      const responseText = await queryGeminiApi(prompt, apiKey);
+      const correctIndices = parseGeminiQuizResponse(responseText, choicesData.length);
+
+      if (correctIndices.length === 0) {
+        log(`[${qNumber}/${validContainers.length}] Could not parse answer: ${responseText.slice(0, 40)}`, "error");
+        continue;
+      }
+
+      const selectedTexts = [];
+      for (const choiceIdx of correctIndices) {
+        const targetChoice = choicesData[choiceIdx - 1];
+        if (targetChoice) {
+          selectedTexts.push(targetChoice.text);
+          if (targetChoice.input) {
+            targetChoice.input.click();
+            targetChoice.input.dispatchEvent(new Event("change", { bubbles: true }));
+            targetChoice.input.dispatchEvent(new Event("input", { bubbles: true }));
+          } else if (targetChoice.wrapper) {
+            targetChoice.wrapper.click();
+          }
+          if (targetChoice.wrapper) {
+            targetChoice.wrapper.style.outline = "2px solid #10b981";
+            targetChoice.wrapper.style.borderRadius = "6px";
+          }
+        }
+      }
+
+      log(`✓ [${qNumber}/${validContainers.length}] Selected: ${selectedTexts.join(", ")}`, "success");
+      solvedCount++;
+      await A(300, 200);
+    } catch (err) {
+      log(`[${qNumber}/${validContainers.length}] Error: ${err.message}`, "error");
+    }
+  }
+
+  log(`🎉 AI Quiz Solving finished! Successfully answered ${solvedCount}/${validContainers.length} questions.`, "success");
 };
 
 // Auto grade action
@@ -1139,6 +1455,7 @@ const copyReviewUrl = async (log) => {
 const Mt = Object.freeze({
   skipModule: Et,
   skipCourse: SkipFullCourse,
+  aiSolveQuiz: solveQuizWithGemini,
   autoGrade: Ut,
   disableAIGrade: Tt,
   exportUnsolved: Dt,
@@ -1149,7 +1466,7 @@ const Mt = Object.freeze({
 
 
 
-const qt = { theme: "light" };
+const qt = { theme: "light", geminiApiKey: "" };
 async function zt() {
   return new Promise((t) => {
     chrome.storage.local.get(["settings"], (e) => {
@@ -1201,8 +1518,8 @@ const M = ({ label: t, onClick: e, variant: o, isLight: i, className: n = "" }) 
       {
         primary: i ? "bg-stone-800 text-white hover:bg-stone-700" : "bg-stone-100 text-stone-900 hover:bg-stone-200",
         accent: i
-          ? "border border-stone-200 bg-stone-50 text-emerald-700 hover:bg-emerald-50"
-          : "border border-stone-700 bg-stone-900 text-emerald-400 hover:bg-stone-800",
+          ? "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold"
+          : "border border-emerald-600 bg-emerald-950/60 text-emerald-400 hover:bg-emerald-900/80 font-semibold",
         secondary: i
           ? "border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100"
           : "border border-stone-700 bg-stone-900 text-stone-400 hover:bg-stone-800",
@@ -1305,7 +1622,8 @@ const Bt = ({ runAutomation: t, logs: e, showDataStream: o, setShowDataStream: i
         className: "custom-scrollbar grid grid-cols-2 gap-1.5 overflow-y-auto pr-0.5",
         children: [
           h(M, { label: "Skip & Next Week", onClick: () => t("skipModule"), variant: "primary", isLight: r.isLight }),
-          h(M, { label: "Skip Full Course", onClick: () => t("skipCourse"), variant: "accent", isLight: r.isLight }),
+          h(M, { label: "Skip Full Course", onClick: () => t("skipCourse"), variant: "secondary", isLight: r.isLight }),
+          h(M, { label: "✨ AI Solve Quiz", onClick: () => t("aiSolveQuiz"), variant: "accent", className: "col-span-2", isLight: r.isLight }),
           h(M, { label: "Download result", onClick: () => t("harvestQuiz"), variant: "secondary", isLight: r.isLight }),
           h(M, { label: "Copy questions", onClick: () => t("exportUnsolved"), variant: "secondary", isLight: r.isLight }),
           h(M, { label: "Auto grade", onClick: () => t("autoGrade"), variant: "secondary", isLight: r.isLight }),
@@ -1318,9 +1636,10 @@ const Bt = ({ runAutomation: t, logs: e, showDataStream: o, setShowDataStream: i
     ]
   });
 const ue = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1";
-const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) =>
-  h("div", {
-    className: "fade-in flex h-full flex-col gap-4",
+const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) => {
+  const [showKey, setShowKey] = P(!1);
+  return h("div", {
+    className: "fade-in flex h-full flex-col gap-3 overflow-y-auto pr-0.5",
     children: [
       h("div", {
         className: "flex items-center justify-between",
@@ -1338,26 +1657,56 @@ const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) =>
           })
         ]
       }),
+      h("div", {
+        className: `flex flex-col gap-1.5 rounded-lg border p-2.5 ${n.surface}`,
+        children: [
+          h("div", {
+            className: "flex items-center justify-between",
+            children: [
+              h("span", { className: `text-[11px] font-semibold ${n.text}`, children: "Gemini API Key" }),
+              h("button", {
+                type: "button",
+                onClick: () => setShowKey(!showKey),
+                className: `text-[10px] font-medium ${n.muted} hover:text-stone-700`,
+                children: showKey ? "Hide" : "Show"
+              })
+            ]
+          }),
+          h("input", {
+            type: showKey ? "text" : "password",
+            placeholder: "Paste AIzaSy... key",
+            value: t.geminiApiKey || "",
+            onInput: (ev) => e({ ...t, geminiApiKey: ev.target.value }),
+            className: `w-full rounded border px-2 py-1 text-[10.5px] font-mono outline-none transition-colors ${
+              n.isLight
+                ? "border-stone-300 bg-white text-stone-800 focus:border-emerald-600"
+                : "border-stone-700 bg-stone-950 text-stone-100 focus:border-emerald-500"
+            }`
+          }),
+          h("span", {
+            className: `text-[9.5px] leading-tight ${n.faint}`,
+            children: "Used for AI Auto Solve Quiz (Get key at aistudio.google.com)"
+          })
+        ]
+      }),
       h(
         "button",
         {
           onClick: i,
-          className: `flex w-full flex-col gap-0.5 rounded-lg border px-3.5 py-2.5 text-left transition-colors ${ue} ${
+          className: `flex w-full flex-col gap-0.5 rounded-lg border px-3 py-1.5 text-left transition-colors ${ue} ${
             n.surface
           } ${n.isLight ? "hover:bg-stone-100" : "hover:bg-stone-800"}`
         },
-        {
-          children: [
-            h("span", { className: `text-[11px] font-semibold ${n.text}`, children: "Copy locked UA" }),
-            h("span", { className: `text-[11px] ${n.faint}`, children: "Save to clipboard" })
-          ]
-        }
+        [
+          h("span", { className: `text-[10.5px] font-semibold ${n.text}`, children: "Copy locked UA" }),
+          h("span", { className: `text-[10px] ${n.faint}`, children: "Save UA to clipboard" })
+        ]
       ),
       h("div", {
-        className: "mt-auto",
+        className: "mt-auto pt-1",
         children: h("button", {
           onClick: o,
-          className: `flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-xs font-semibold transition-colors ${ue} ${
+          className: `flex w-full items-center justify-center rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${ue} ${
             n.isLight ? "bg-stone-800 text-white hover:bg-stone-700" : "bg-stone-100 text-stone-900 hover:bg-stone-200"
           }`,
           children: "Save changes"
@@ -1365,13 +1714,14 @@ const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) =>
       })
     ]
   });
+};
 const We = "coursera-locking-browser/0.6.3";
 const Je = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/60 focus-visible:ring-offset-1";
 const Vt = () => {
   const [t, e] = P("main"),
     [o, i] = P(!1),
     [n, r] = P(!0), // Show console = true by default
-    [s, c] = P({ theme: "light" }),
+    [s, c] = P({ theme: "light", geminiApiKey: "" }),
     { logs: d, latestStatus: l, statusType: p, addLog: a, clearLogs: m } = Ot(),
     u = Ht(s);
   Me(() => {
@@ -1404,7 +1754,7 @@ const Vt = () => {
     };
   return h("div", {
     className: `fixed bottom-6 right-6 z-[2147483647] flex w-80 flex-col overflow-hidden rounded-lg border font-sans shadow-md transition-all duration-200 ${
-      o ? "h-11" : n ? "h-[460px]" : t === "settings" ? "h-[300px]" : "h-[340px]"
+      o ? "h-11" : n ? "h-[490px]" : t === "settings" ? "h-[360px]" : "h-[380px]"
     } ${u.panel} ${u.text}`,
     children: [
       h("div", {
