@@ -1,22 +1,22 @@
-# 🚀 Coursera AutoPilot Pro (v1.3.0)
+# Coursera AutoPilot Pro (v1.3.0)
 
-Tiện ích mở rộng (Browser Extension) hỗ trợ tự động hóa học tập, tua nhanh tiến độ và **tự động giải bài tập trắc nghiệm bằng Google Gemini Vision/LLM AI** trên **Coursera**.
-
----
-
-## 🌟 Tính năng nổi bật
-
-* ✨ **AI Solve Quiz (Tự động giải & click đáp án):** Đọc toàn bộ câu hỏi và đáp án trên trang Quiz, gửi qua Gemini AI (`gemini-2.0-flash`), tự động tìm đáp án chính xác và **tự động click chọn thẳng vào các nút Radio/Checkbox** trên màn hình!
-* ⏭️ **Skip & Next Week (Tự động nhảy tuần):** Tự động hoàn thành toàn bộ Video, Reading, Ungraded Lab, Discussion trong tuần hiện tại và **tự động chuyển sang tuần tiếp theo** (`/home/week/X`).
-* ⚡ **Skip Full Course (1-Click toàn khóa):** Tự động hoàn thành tất cả các Module/Week trong toàn bộ khóa học từ đầu đến cuối chỉ với 1 lần bấm.
-* 🤖 **Nhận diện thông minh:** Tự động lấy User ID, Course ID và cấu trúc khóa học qua API Coursera (không lo bị lỗi `"Environment search failed"`).
-* 📋 **Copy Questions & Download Result:** Xuất đề thi Quiz chưa làm hoặc tải đáp án bài Quiz 100% điểm về máy tính dạng file JSON.
-* ✍️ **Auto Grade & Fill Peer:** Tự động chấm điểm bài nộp của học viên khác và tự động nộp bài tập Peer Assignment.
-* 🖥️ **Console thời gian thực:** Xem chi tiết tiến độ xử lý từng bài học ngay trên giao diện widget nổi.
+Tiện ích mở rộng (Browser Extension) hỗ trợ tự động hóa học tập, tua nhanh tiến độ và tự động giải bài tập trắc nghiệm bằng Google Gemini AI trên nền tảng Coursera.
 
 ---
 
-## 📦 Hướng dẫn cài đặt
+## Tính năng chính
+
+* **AI Solve Quiz (Giải Quiz 1-Click):** Tự động đóng gói toàn bộ câu hỏi và đáp án trên trang Quiz gửi sang Gemini AI trong 1 request duy nhất, nhận đáp án và tự động click chọn thẳng vào các nút Radio/Checkbox trên màn hình.
+* **Skip & Next Week:** Tự động hoàn thành toàn bộ Video, Reading, Ungraded Lab, Discussion trong tuần hiện tại và tự động chuyển sang tuần tiếp theo (`/home/week/X`).
+* **Skip Full Course:** Tự động hoàn thành tất cả các Module/Week trong toàn bộ khóa học từ đầu đến cuối chỉ với 1 lần bấm.
+* **Nhận diện phiên học tự động:** Tự động lấy User ID, Course ID và cấu trúc khóa học qua API Coursera.
+* **Copy Questions & Download Result:** Xuất đề thi Quiz chưa làm hoặc tải đáp án bài Quiz 100% điểm về máy tính dạng file JSON.
+* **Auto Grade & Fill Peer:** Tự động chấm điểm bài nộp của học viên khác và tự động nộp bài tập Peer Assignment.
+* **Console thời gian thực:** Xem chi tiết tiến độ xử lý từng bài học ngay trên giao diện widget nổi.
+
+---
+
+## Hướng dẫn cài đặt
 
 ### 1. Trên Google Chrome / Brave / Microsoft Edge / Cốc Cốc:
 1. Mở trình duyệt và truy cập: `chrome://extensions/`
@@ -38,34 +38,33 @@ Tiện ích mở rộng (Browser Extension) hỗ trợ tự động hóa học t
 
 ---
 
-## 🔑 Cấu hình Gemini API Key (Để dùng tính năng AI Solve Quiz)
+## Cấu hình Gemini API Key & Model
 
 1. Lấy API Key miễn phí tại [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. Trên trang Coursera, bấm vào biểu tượng **⚙️ (Cài đặt)** ở góc trên bảng điều khiển nổi của tool.
-3. Dán API Key vào ô **`Gemini API Key`** (`AIzaSy...`).
-4. Bấm **`Save changes`**. Key sẽ được lưu an toàn trong trình duyệt của bạn.
+2. Trên trang Coursera, bấm vào biểu tượng bánh răng (Cài đặt) ở góc trên bảng điều khiển nổi của tool.
+3. Dán API Key vào ô `Gemini API Key`.
+4. Chọn Model mong muốn tại ô `Gemini Model` (mặc định: `Gemini 3.7 Flash`).
+5. Bấm **Save changes**. Key và Model sẽ được lưu vào bộ nhớ trình duyệt.
 
 ---
 
-## 🎮 Hướng dẫn sử dụng
+## Bảng chức năng
 
-Khi truy cập vào bất kỳ khóa học nào trên Coursera (ví dụ: `https://www.coursera.org/learn/<tên_khóa_học>/...`), bảng điều khiển của tool sẽ xuất hiện ở **góc dưới cùng bên phải màn hình**.
-
-### Chi tiết các nút chức năng:
+Khi truy cập vào khóa học trên Coursera, bảng điều khiển của tool sẽ hiển thị ở góc dưới bên phải màn hình.
 
 | Nút bấm | Chức năng | Hướng dẫn chi tiết |
 | :--- | :--- | :--- |
-| **`✨ AI Solve Quiz`** | **Tự động giải Quiz bằng AI** | Khi mở bài Quiz/Exam, bấm nút này để AI tự đọc câu hỏi, giải và **tự động click chọn đáp án đúng trên màn hình** (hỗ trợ cả câu hỏi chọn 1 hoặc nhiều đáp án). |
-| **`Skip & Next Week`** | **Skip tuần hiện tại & Tự nhảy tuần mới** | Skip toàn bộ nội dung học trong tuần hiện tại, sau đó tự đếm ngược 2.5s và điều hướng sang tuần kế tiếp rồi tiếp tục chạy. |
-| **`Skip Full Course`** | **Skip toàn bộ khóa học** | Gửi API hoàn thành toàn bộ các tuần/module từ Module 1 đến hết khóa học chỉ trong vài giây. |
-| **`Download result`** | **Tải đáp án Quiz** | Khi đang ở trang kết quả Quiz đạt 100%, bấm nút này để tải file JSON lưu câu hỏi và đáp án. |
-| **`Copy questions`** | **Copy câu hỏi Quiz** | Khi đang ở trang làm bài Quiz chưa giải, bấm nút này để copy toàn bộ câu hỏi vào Clipboard. |
-| **`Auto grade`** | **Chấm điểm Peer Review** | Khi đang ở trang chấm bài bạn học, tự động chọn điểm tối đa và điền nhận xét tích cực. |
-| **`Fill Peer`** | **Nộp bài Peer Assignment** | Khi đang ở trang nộp bài tập Peer, tự động tạo file và điền form nộp bài mẫu. |
-| **`Disable grader`** | **Tắt AI Grader** | Ẩn và vô hiệu hóa bộ chấm tự động bằng AI (nếu khóa học có áp dụng). |
-| **`Review URL`** | **Lấy link bài nộp Peer** | Copy đường dẫn bài nộp của bạn để nhờ bạn bè chấm chéo. |
+| `AI Solve Quiz` | Tự động giải Quiz bằng AI | Gửi toàn bộ câu hỏi trong 1 request duy nhất đến Gemini AI và tự động click chọn các đáp án đúng trên màn hình. |
+| `Skip & Next Week` | Skip tuần hiện tại & Chuyển tuần mới | Skip toàn bộ nội dung trong tuần hiện tại, đếm ngược 2.5s rồi chuyển sang tuần tiếp theo. |
+| `Skip Full Course` | Skip toàn bộ khóa học | Gửi API hoàn thành toàn bộ các tuần từ Module 1 đến hết khóa học. |
+| `Download result` | Tải đáp án Quiz | Khi đang ở trang kết quả Quiz đạt 100%, tải file JSON lưu câu hỏi và đáp án về máy. |
+| `Copy questions` | Copy câu hỏi Quiz | Khi đang ở trang làm bài Quiz, copy toàn bộ câu hỏi và đáp án vào Clipboard. |
+| `Auto grade` | Chấm điểm Peer Review | Tự động chấm điểm tối đa và điền nhận xét khi chấm bài học viên khác. |
+| `Fill Peer` | Nộp bài Peer Assignment | Tự động tạo file và điền form nộp bài mẫu cho bài tập Peer. |
+| `Disable grader` | Tắt AI Grader | Vô hiệu hóa bộ chấm tự động bằng AI của khóa học (nếu có). |
+| `Review URL` | Lấy link bài nộp Peer | Copy đường dẫn bài nộp của bạn để gửi nhờ chấm chéo. |
 
 ---
 
-## 💡 Lưu ý quan trọng
-* Tính năng **`AI Solve Quiz`** sẽ tự động click chọn các đáp án trên màn hình và đóng khung viền xanh lá để bạn dễ quan sát. Tool sẽ không tự bấm nút nộp bài (Submit) để bạn có thể kiểm tra lại trước khi nộp.
+## Lưu ý
+* Tính năng `AI Solve Quiz` chỉ click chọn đáp án trên màn hình và đóng viền xanh lá để bạn kiểm tra, không tự động bấm Submit.

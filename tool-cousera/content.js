@@ -40,7 +40,6 @@ var Jt=Object.defineProperty;var Zt=(N,g,D)=>g in N?Jt(N,g,{enumerable:!0,config
  * See the LICENSE file in the root directory of this source tree.
  */const wt=H("Sun",[["circle",{cx:"12",cy:"12",r:"4",key:"4exip2"}],["path",{d:"M12 2v2",key:"tus03m"}],["path",{d:"M12 20v2",key:"1lh1kg"}],["path",{d:"m4.93 4.93 1.41 1.41",key:"149t6j"}],["path",{d:"m17.66 17.66 1.41 1.41",key:"ptbguv"}],["path",{d:"M2 12h2",key:"1t8f8n"}],["path",{d:"M20 12h2",key:"1q8mjw"}],["path",{d:"m6.34 17.66-1.41 1.41",key:"1m8zz5"}],["path",{d:"m19.07 4.93-1.41 1.41",key:"1shlcs"}]]);
 
-// Logic module for Coursera AutoPilot with Gemini AI Quiz Solver
 
 const U = {
   QUIZ_CONTAINER: ".css-1erl2aq, .rc-FormPartsQuestion",
@@ -738,7 +737,7 @@ class Nt {
   }
 
   async fetchCourseDetails() {
-    this.ctx.log("Retrieving course & module structure...", "progress");
+    this.ctx.log("Retrieving course structure...", "progress");
     const url = `/api/onDemandCourseMaterials.v2/?q=slug&slug=${this.ctx.courseSlug}&includes=modules,items,lessons&fields=moduleIds,onDemandCourseMaterialModules.v1(name,slug,id,lessonIds),onDemandCourseMaterialItems.v2(name,slug,timeCommitment,contentSummary,moduleId,lessonId)&showLockedItems=true`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Could not fetch course materials (HTTP ${res.status})`);
@@ -838,7 +837,7 @@ class Nt {
           this.ctx.log(`${moduleName} processed. ${manualItems.length} items require manual action (Quizzes/Exams).`, "info");
           manualItems.forEach((m) => this.ctx.log(`> Manual: ${m.name}`, "info"));
         } else {
-          this.ctx.log(`${moduleName} completed! Progress synced.`, "success");
+          this.ctx.log(`${moduleName} completed. Progress synced.`, "success");
         }
       }
 
@@ -858,7 +857,7 @@ class Nt {
         }
       } else {
         sessionStorage.removeItem("coursera_auto_skip");
-        this.ctx.log("🎉 Course completed! All modules processed.", "success");
+        this.ctx.log("Course completed. All modules processed.", "success");
       }
 
       await A(1500, 1000);
@@ -871,7 +870,7 @@ class Nt {
   async executeFullCourse(courseDetails) {
     try {
       const { moduleIds, modules, items } = courseDetails;
-      this.ctx.log(`🚀 Starting Full Course Skip (${moduleIds.length} modules total)...`, "progress");
+      this.ctx.log(`Starting Full Course Skip (${moduleIds.length} modules total)...`, "progress");
 
       const progressSet = await this.fetchProgress();
       let totalSkipped = 0;
@@ -894,13 +893,13 @@ class Nt {
         }
 
         await this.finalizeModule(mId);
-        this.ctx.log(`✓ Week ${i + 1} finalized.`, "success");
+        this.ctx.log(`Week ${i + 1} finalized.`, "success");
         await A(500, 500);
       }
 
       sessionStorage.removeItem("coursera_auto_skip");
       this.ctx.log(
-        `🎉 FULL COURSE COMPLETED! Skipped: ${totalSkipped} items. (Manual items: ${totalManual})`,
+        `Full course completed. Skipped: ${totalSkipped} items. (Manual items: ${totalManual})`,
         "success"
       );
       await A(2000, 1000);
@@ -967,14 +966,27 @@ const SkipFullCourse = async (log) => {
 };
 
 // ==========================================
-// 🧠 GEMINI AI QUIZ SOLVER IMPLEMENTATION
+// GEMINI AI QUIZ SOLVER (1-CLICK BATCH MODE)
 // ==========================================
 
-async function queryGeminiApi(prompt, apiKey) {
-  const models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
-  let lastError = null;
+async function queryGeminiApi(prompt, apiKey, preferredModel = "gemini-3.7-flash") {
+  const allModels = [
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite"
+  ];
 
-  for (const model of models) {
+  let modelsToTry = [];
+  if (preferredModel && preferredModel !== "auto" && allModels.includes(preferredModel)) {
+    modelsToTry = [preferredModel, ...allModels.filter((m) => m !== preferredModel)];
+  } else {
+    modelsToTry = allModels;
+  }
+
+  let lastError = null;
+  for (const model of modelsToTry) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const res = await fetch(url, {
@@ -1003,12 +1015,38 @@ async function queryGeminiApi(prompt, apiKey) {
   throw lastError || new Error("Gemini API request failed on all models.");
 }
 
+function parseBatchResponse(responseText) {
+  try {
+    const cleaned = responseText.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const jsonStr = cleaned.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed.answers)) return parsed.answers;
+      if (Array.isArray(parsed)) return parsed;
+    }
+    const firstBracket = cleaned.indexOf("[");
+    const lastBracket = cleaned.lastIndexOf("]");
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      const jsonStr = cleaned.slice(firstBracket, lastBracket + 1);
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (err) {
+    console.error("Batch parse error:", err);
+  }
+  return null;
+}
+
 function parseGeminiQuizResponse(responseText, totalChoices) {
   try {
     const cleaned = responseText.replace(/```json/gi, "").replace(/```/g, "").trim();
-    const jsonMatch = cleaned.match(/\{[\s\S]*?\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const jsonStr = cleaned.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(jsonStr);
       if (Array.isArray(parsed.correct_indices)) {
         const filtered = parsed.correct_indices.map(Number).filter((n) => n >= 1 && n <= totalChoices);
         if (filtered.length > 0) return filtered;
@@ -1042,10 +1080,11 @@ const solveQuizWithGemini = async (log) => {
   const settings = await zt();
   let apiKey = settings.geminiApiKey;
   if (!apiKey || apiKey.trim() === "") {
-    log("Gemini API Key missing! Click ⚙️ (Settings) to enter your API Key.", "error");
+    log("Gemini API Key missing. Open Settings to configure key.", "error");
     return;
   }
   apiKey = apiKey.trim();
+  const selectedModel = settings.geminiModel || "gemini-3.7-flash";
 
   // Find all question containers
   const containerSelectors = [
@@ -1067,13 +1106,14 @@ const solveQuizWithGemini = async (log) => {
   });
 
   if (validContainers.length === 0) {
-    log("No quiz questions found. Ensure you are on an active Quiz/Exam page.", "error");
+    log("No quiz questions found on active page.", "error");
     return;
   }
 
-  log(`Found ${validContainers.length} questions. Starting AI solving...`, "progress");
-  let solvedCount = 0;
+  log(`Extracted ${validContainers.length} questions. Packaging 1-click batch request...`, "progress");
 
+  // Parse questions & choices data
+  const parsedQuestions = [];
   for (let qIdx = 0; qIdx < validContainers.length; qIdx++) {
     const container = validContainers[qIdx];
     const qNumber = qIdx + 1;
@@ -1130,63 +1170,139 @@ const solveQuizWithGemini = async (log) => {
       });
     }
 
-    if (choicesData.length === 0) {
-      log(`[${qNumber}/${validContainers.length}] Could not extract choices. Skipping.`, "info");
-      continue;
-    }
+    parsedQuestions.push({
+      qNumber,
+      container,
+      questionText,
+      choicesData
+    });
+  }
 
-    const shortQ = questionText.length > 40 ? questionText.slice(0, 40) + "..." : questionText;
-    log(`[${qNumber}/${validContainers.length}] AI solving: "${shortQ}"`, "progress");
-
-    try {
-      const prompt = `You are an expert AI quiz solver. Solve this multiple-choice quiz question.
-
-Question:
-${questionText}
-
+  // Build Batch Prompt
+  const qBlocks = parsedQuestions
+    .map((q) => {
+      const choicesText = q.choicesData.map((c) => `  ${c.index}. ${c.text}`).join("\n");
+      return `--- Question ${q.qNumber} ---
+${q.questionText}
 Choices:
-${choicesData.map((c) => `${c.index}. ${c.text}`).join("\n")}
+${choicesText}`;
+    })
+    .join("\n\n");
+
+  const batchPrompt = `You are an expert AI quiz solver. Solve ALL the following multiple-choice questions.
+
+${qBlocks}
 
 Respond ONLY in valid JSON format:
-{"correct_indices": [1]} (for single choice) or {"correct_indices": [1, 3]} (for multi-select)
-where numbers represent the 1-based index of the correct choices above. Do not include markdown or extra explanations.`;
+{
+  "answers": [
+    { "question_number": 1, "correct_indices": [1] },
+    { "question_number": 2, "correct_indices": [1, 3] }
+  ]
+}
+where "correct_indices" are the 1-based indices of the correct choices for that question. Do not include markdown or extra explanations.`;
 
-      const responseText = await queryGeminiApi(prompt, apiKey);
-      const correctIndices = parseGeminiQuizResponse(responseText, choicesData.length);
+  log(`Sending all ${parsedQuestions.length} questions to Gemini...`, "progress");
 
-      if (correctIndices.length === 0) {
-        log(`[${qNumber}/${validContainers.length}] Could not parse answer: ${responseText.slice(0, 40)}`, "error");
-        continue;
-      }
+  let solvedCount = 0;
+  let batchSuccess = false;
 
-      const selectedTexts = [];
-      for (const choiceIdx of correctIndices) {
-        const targetChoice = choicesData[choiceIdx - 1];
-        if (targetChoice) {
-          selectedTexts.push(targetChoice.text);
-          if (targetChoice.input) {
-            targetChoice.input.click();
-            targetChoice.input.dispatchEvent(new Event("change", { bubbles: true }));
-            targetChoice.input.dispatchEvent(new Event("input", { bubbles: true }));
-          } else if (targetChoice.wrapper) {
-            targetChoice.wrapper.click();
+  try {
+    const responseText = await queryGeminiApi(batchPrompt, apiKey, selectedModel);
+    const answers = parseBatchResponse(responseText);
+
+    if (answers && Array.isArray(answers) && answers.length > 0) {
+      batchSuccess = true;
+      log(`AI answered in batch. Applying answers...`, "progress");
+
+      for (const ans of answers) {
+        const qNum = ans.question_number || ans.qNumber || ans.questionNumber || ans.q;
+        const targetQ = parsedQuestions.find((q) => q.qNumber === qNum);
+        const correctIndices = ans.correct_indices || ans.correctIndices || ans.indices || ans.answers || [];
+
+        if (targetQ && Array.isArray(correctIndices) && correctIndices.length > 0) {
+          const selectedTexts = [];
+          for (const choiceIdx of correctIndices) {
+            const targetChoice = targetQ.choicesData[choiceIdx - 1];
+            if (targetChoice) {
+              selectedTexts.push(targetChoice.text);
+              if (targetChoice.input) {
+                targetChoice.input.click();
+                targetChoice.input.dispatchEvent(new Event("change", { bubbles: true }));
+                targetChoice.input.dispatchEvent(new Event("input", { bubbles: true }));
+              } else if (targetChoice.wrapper) {
+                targetChoice.wrapper.click();
+              }
+              if (targetChoice.wrapper) {
+                targetChoice.wrapper.style.outline = "2px solid #10b981";
+                targetChoice.wrapper.style.borderRadius = "6px";
+              }
+            }
           }
-          if (targetChoice.wrapper) {
-            targetChoice.wrapper.style.outline = "2px solid #10b981";
-            targetChoice.wrapper.style.borderRadius = "6px";
-          }
+          log(`[Q${qNum}] Selected: ${selectedTexts.join(", ")}`, "success");
+          solvedCount++;
         }
       }
+    }
+  } catch (batchErr) {
+    log(`Batch query status: ${batchErr.message}. Checking fallback...`, "info");
+  }
 
-      log(`✓ [${qNumber}/${validContainers.length}] Selected: ${selectedTexts.join(", ")}`, "success");
-      solvedCount++;
-      await A(300, 200);
-    } catch (err) {
-      log(`[${qNumber}/${validContainers.length}] Error: ${err.message}`, "error");
+  // If batch had missing answers, fallback for remaining unsolved questions
+  if (solvedCount < parsedQuestions.length) {
+    const remainingQuestions = parsedQuestions.filter((q) => {
+      const checkedInputs = q.container.querySelectorAll('input:checked, input[type="radio"]:checked, input[type="checkbox"]:checked');
+      return checkedInputs.length === 0;
+    });
+
+    if (remainingQuestions.length > 0) {
+      log(`Solving ${remainingQuestions.length} remaining questions...`, "progress");
+      for (const q of remainingQuestions) {
+        try {
+          const singlePrompt = `You are an expert AI quiz solver. Solve this multiple-choice question.
+
+Question:
+${q.questionText}
+
+Choices:
+${q.choicesData.map((c) => `${c.index}. ${c.text}`).join("\n")}
+
+Respond ONLY in valid JSON format:
+{"correct_indices": [1]} (or {"correct_indices": [1, 3]} for multi-select)`;
+
+          const responseText = await queryGeminiApi(singlePrompt, apiKey, selectedModel);
+          const correctIndices = parseGeminiQuizResponse(responseText, q.choicesData.length);
+          if (correctIndices.length > 0) {
+            const selectedTexts = [];
+            for (const choiceIdx of correctIndices) {
+              const targetChoice = q.choicesData[choiceIdx - 1];
+              if (targetChoice) {
+                selectedTexts.push(targetChoice.text);
+                if (targetChoice.input) {
+                  targetChoice.input.click();
+                  targetChoice.input.dispatchEvent(new Event("change", { bubbles: true }));
+                  targetChoice.input.dispatchEvent(new Event("input", { bubbles: true }));
+                } else if (targetChoice.wrapper) {
+                  targetChoice.wrapper.click();
+                }
+                if (targetChoice.wrapper) {
+                  targetChoice.wrapper.style.outline = "2px solid #10b981";
+                  targetChoice.wrapper.style.borderRadius = "6px";
+                }
+              }
+            }
+            log(`[Q${q.qNumber}] Selected: ${selectedTexts.join(", ")}`, "success");
+            solvedCount++;
+          }
+          await A(200, 150);
+        } catch (singleErr) {
+          log(`[Q${q.qNumber}] Error: ${singleErr.message}`, "error");
+        }
+      }
     }
   }
 
-  log(`🎉 AI Quiz Solving finished! Successfully answered ${solvedCount}/${validContainers.length} questions.`, "success");
+  log(`AI Quiz Solving finished. Answered ${solvedCount}/${parsedQuestions.length} questions.`, "success");
 };
 
 // Auto grade action
@@ -1380,7 +1496,7 @@ const Pt = async (log) => {
       gradingType: "HUMAN"
     });
     if (submitRes.ok) {
-      log("Peer submission COMPLETE.", "success");
+      log("Peer submission completed.", "success");
       setTimeout(() => window.location.reload(), 2000);
     } else {
       throw new Error(`Submit rejected: ${submitRes.status}`);
@@ -1445,7 +1561,7 @@ const copyReviewUrl = async (log) => {
 
     const reviewUrl = `https://www.coursera.org/learn/${courseSlug}/peer/${itemId}/${assignSlug}/review/${subId}`;
     await navigator.clipboard.writeText(reviewUrl);
-    log("Review URL copied to clipboard!", "success");
+    log("Review URL copied to clipboard.", "success");
     log(`URL: ${reviewUrl}`, "info");
   } catch (err) {
     log(`Failed to copy URL: ${err.message}`, "error");
@@ -1623,7 +1739,7 @@ const Bt = ({ runAutomation: t, logs: e, showDataStream: o, setShowDataStream: i
         children: [
           h(M, { label: "Skip & Next Week", onClick: () => t("skipModule"), variant: "primary", isLight: r.isLight }),
           h(M, { label: "Skip Full Course", onClick: () => t("skipCourse"), variant: "secondary", isLight: r.isLight }),
-          h(M, { label: "✨ AI Solve Quiz", onClick: () => t("aiSolveQuiz"), variant: "accent", className: "col-span-2", isLight: r.isLight }),
+          h(M, { label: "AI Solve Quiz", onClick: () => t("aiSolveQuiz"), variant: "accent", className: "col-span-2", isLight: r.isLight }),
           h(M, { label: "Download result", onClick: () => t("harvestQuiz"), variant: "secondary", isLight: r.isLight }),
           h(M, { label: "Copy questions", onClick: () => t("exportUnsolved"), variant: "secondary", isLight: r.isLight }),
           h(M, { label: "Auto grade", onClick: () => t("autoGrade"), variant: "secondary", isLight: r.isLight }),
@@ -1698,7 +1814,7 @@ const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) => {
                       : "border-stone-700 bg-stone-900 text-stone-100 focus:border-emerald-500"
                   }`,
                   children: [
-                    h("option", { value: "gemini-3.7-flash", children: "Gemini 3.7 Flash (Default - Best)" }),
+                    h("option", { value: "gemini-3.7-flash", children: "Gemini 3.7 Flash (Default)" }),
                     h("option", { value: "gemini-3.6-flash", children: "Gemini 3.6 Flash" }),
                     h("option", { value: "gemini-3.5-flash", children: "Gemini 3.5 Flash" }),
                     h("option", { value: "gemini-3.5-flash-lite", children: "Gemini 3.5 Flash Lite" }),
