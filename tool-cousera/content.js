@@ -1349,59 +1349,90 @@ const Ut = async (log) => {
   }
 };
 
-// Disable AI grade - Complete Multi-layer implementation
+// Comprehensive Disable AI Grader
 const Tt = async (log) => {
   try {
+    log("Scanning for AI grading & Switch to Peer options...", "progress");
     let actionsTaken = 0;
-    log("Scanning for Coursera AI grading elements...", "progress");
 
-    // 1. Click any "Opt out of AI" / "Switch to Peer Review" buttons
-    const allButtons = Array.from(document.querySelectorAll("button, a, [role='button'], input[type='button']"));
-    for (const btn of allButtons) {
-      const text = (btn.innerText || btn.textContent || btn.getAttribute("aria-label") || "").toLowerCase();
+    const findClickable = (keywords) => {
+      const candidates = Array.from(
+        document.querySelectorAll("button, a, [role='button'], input[type='button'], span[role='button'], label")
+      );
+      return candidates.filter((el) => {
+        const txt = (el.innerText || el.textContent || el.getAttribute("aria-label") || "").toLowerCase().trim();
+        return keywords.some((kw) => txt.includes(kw.toLowerCase()));
+      });
+    };
+
+    // 1. Click "Switch to peer grading" button / link
+    const switchKeywords = [
+      "switch to peer grading",
+      "switch to peer",
+      "peer grading instead",
+      "opt out of ai",
+      "opt out",
+      "chuyển sang chấm điểm bởi bạn học",
+      "chuyển sang chấm bạn",
+      "chuyển sang đánh giá ngang hàng",
+      "chuyển sang bạn học",
+      "chấm điểm ngang hàng",
+      "tắt ai chấm",
+      "hủy chấm ai"
+    ];
+
+    const switchBtns = findClickable(switchKeywords);
+    if (switchBtns.length > 0) {
+      for (const btn of switchBtns) {
+        log(`Found option: "${btn.innerText.trim().slice(0, 35)}". Clicking...`, "progress");
+        btn.click();
+        actionsTaken++;
+        await A(500, 300);
+
+        const modalBtns = findClickable(["confirm", "xác nhận", "switch", "chuyển", "yes", "đồng ý", "continue"]);
+        const modalConfirm = modalBtns.find((m) => m.closest("[role='dialog'], .cds-modal, [class*='modal'], [class*='dialog']"));
+        if (modalConfirm) {
+          log("Confirming switch to peer grading in dialog...", "progress");
+          modalConfirm.click();
+          actionsTaken++;
+          await A(500, 300);
+        }
+      }
+    }
+
+    // 2. Select any HUMAN / PEER radio options or uncheck AI toggles
+    const inputs = Array.from(document.querySelectorAll("input[type='radio'], input[type='checkbox']"));
+    for (const inp of inputs) {
+      const val = (inp.value || inp.name || inp.id || "").toLowerCase();
+      const parentLabel = (inp.closest("label")?.innerText || inp.parentElement?.innerText || "").toLowerCase();
+
       if (
-        text.includes("opt out") ||
-        text.includes("switch to peer") ||
-        text.includes("peer review instead") ||
-        text.includes("disable ai") ||
-        text.includes("turn off ai") ||
-        text.includes("use standard grading") ||
-        text.includes("chuyển sang chấm bạn") ||
-        text.includes("tắt ai") ||
-        text.includes("hủy chấm ai")
+        val.includes("human") ||
+        val.includes("peer") ||
+        parentLabel.includes("human") ||
+        parentLabel.includes("peer") ||
+        parentLabel.includes("bạn học") ||
+        parentLabel.includes("ngang hàng")
       ) {
-        try {
-          btn.click();
+        if (!inp.checked) {
+          inp.click();
+          inp.dispatchEvent(new Event("change", { bubbles: true }));
           actionsTaken++;
-          log(`Clicked "${text.trim().slice(0, 30)}"`, "success");
-        } catch {}
-      }
-    }
-
-    // 2. Select HUMAN / PEER grading radios and uncheck AI toggles
-    const radios = Array.from(document.querySelectorAll("input[type='radio'], input[type='checkbox']"));
-    for (const r of radios) {
-      const val = (r.value || r.name || r.id || "").toLowerCase();
-      const label = (r.closest("label")?.innerText || "").toLowerCase();
-      if (val.includes("human") || val.includes("peer") || label.includes("human") || label.includes("peer") || label.includes("bạn bè")) {
-        if (!r.checked) {
-          r.click();
-          r.dispatchEvent(new Event("change", { bubbles: true }));
-          actionsTaken++;
-          log("Selected Peer/Human grading option.", "success");
+          log("Selected Human / Peer grading radio.", "success");
         }
       }
-      if (val.includes("ai") || label.includes("ai") || label.includes("trí tuệ nhân tạo")) {
-        if (r.type === "checkbox" && r.checked) {
-          r.click();
-          r.dispatchEvent(new Event("change", { bubbles: true }));
+
+      if (val.includes("ai") || parentLabel.includes("ai") || parentLabel.includes("trí tuệ nhân tạo")) {
+        if (inp.type === "checkbox" && inp.checked) {
+          inp.click();
+          inp.dispatchEvent(new Event("change", { bubbles: true }));
           actionsTaken++;
-          log("Unchecked AI grading toggle.", "success");
+          log("Disabled AI grading checkbox.", "success");
         }
       }
     }
 
-    // 3. Remove / hide AI grader UI containers
+    // 3. Remove / Hide AI Grader UI blocks and banners
     const aiSelectors = [
       ".rc-AIGradeInstruction",
       ".css-8h7v9a",
@@ -1432,20 +1463,7 @@ const Tt = async (log) => {
       actionsTaken++;
     });
 
-    // 4. Scan text for AI evaluation banners
-    const allDivs = Array.from(document.querySelectorAll("div, section, aside"));
-    for (const d of allDivs) {
-      if (d.children.length === 0 && d.innerText) {
-        const txt = d.innerText.toLowerCase();
-        if ((txt.includes("ai-graded") || txt.includes("ai grading") || txt.includes("chấm bằng ai")) && txt.length < 150) {
-          const parentBanner = d.closest(".cds-banner, [class*='Banner'], [class*='Card'], .rc-FormPart, div[role='region']") || d;
-          parentBanner.style.display = "none";
-          actionsTaken++;
-        }
-      }
-    }
-
-    // 5. Remove AI grader scripts
+    // 4. Remove AI grader scripts
     const scripts = Array.from(document.querySelectorAll("script"));
     for (const s of scripts) {
       const content = (s.src || "") + (s.innerText || "");
@@ -1461,7 +1479,7 @@ const Tt = async (log) => {
       }
     }
 
-    // 6. Direct API opt-out if on peer assignment page
+    // 5. Direct API opt-out if on a peer assignment page
     try {
       const userId = await Oe();
       const courseId = Fe();
@@ -1489,8 +1507,8 @@ const Tt = async (log) => {
           body: JSON.stringify({ courseId, itemId, gradingType: "HUMAN" })
         }).catch(() => {});
 
-        log("Sent HUMAN / Peer grading enforcement to Coursera API.", "success");
         actionsTaken++;
+        log("Applied HUMAN / Peer grading mode via API.", "success");
       }
     } catch {}
 
@@ -1498,9 +1516,10 @@ const Tt = async (log) => {
     localStorage.setItem("coursera_disable_ai_grader", "true");
 
     if (actionsTaken > 0) {
-      log(`AI grading disabled (${actionsTaken} actions executed).`, "success");
+      log(`AI grading disabled successfully (${actionsTaken} actions executed).`, "success");
     } else {
-      log("AI grading disabled. Switched to Peer review mode.", "success");
+      log("Note: If you have already submitted, look for 'Switch to peer grading' on your result page.", "info");
+      log("AI grader suppression applied.", "success");
     }
   } catch (err) {
     log(`Error: ${err.message}`, "error");
