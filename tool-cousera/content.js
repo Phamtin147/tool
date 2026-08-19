@@ -717,7 +717,7 @@ class Ct {
     });
     await A(1000, 500);
     const submitRes = await ctx.post("/api/onDemandPeerSubmissions.v1/", {
-      courseId: ctx.courseId,
+      courseId,
       itemId: item.id,
       gradingType: "HUMAN"
     });
@@ -1349,24 +1349,73 @@ const Ut = async (log) => {
   }
 };
 
-// Disable AI grade
+// Enhanced Disable AI grade
 const Tt = async (log) => {
   try {
+    let disabledCount = 0;
+    log("Scanning for Coursera AI grader components...", "progress");
+
+    // 1. Remove AI grader scripts
     const scripts = document.querySelectorAll("script");
-    let disabled = false;
-    log("Searching for AI grader...", "progress");
     for (const s of Array.from(scripts)) {
-      if (s.innerText.includes("ai-grader") || s.src.includes("ai-grader") || s.innerText.includes("GradingPolicy")) {
+      const srcOrText = (s.src || "") + (s.innerText || "");
+      if (
+        srcOrText.includes("ai-grader") ||
+        srcOrText.includes("ai-grading") ||
+        srcOrText.includes("ai-assessment") ||
+        srcOrText.includes("GradingPolicy") ||
+        srcOrText.includes("aiFeedback")
+      ) {
         s.remove();
-        disabled = true;
+        disabledCount++;
       }
     }
-    const aiBlocks = document.querySelectorAll(".rc-AIGradeInstruction, .css-8h7v9a");
+
+    // 2. Hide all AI grader UI containers and feedback boxes
+    const aiSelectors = [
+      ".rc-AIGradeInstruction",
+      ".css-8h7v9a",
+      ".rc-AiFeedbackContainer",
+      "[data-testid*='ai-grade']",
+      "[data-testid*='ai-grading']",
+      "[data-testid*='ai-evaluator']",
+      "[data-testid*='ai-evaluation']",
+      "[class*='AIGrade']",
+      "[class*='AiGrading']",
+      "[class*='ai-grading']",
+      "[class*='AiReview']",
+      "[class*='ai-feedback']",
+      "[class*='ai-coach']",
+      "div[id*='ai-grader']",
+      "div[id*='ai-grading']",
+      "div[aria-label*='AI grading']",
+      "div[aria-label*='AI Graded']"
+    ];
+
+    const aiBlocks = document.querySelectorAll(aiSelectors.join(", "));
     for (const b of Array.from(aiBlocks)) {
       b.style.display = "none";
-      disabled = true;
+      b.setAttribute("aria-hidden", "true");
+      disabledCount++;
     }
-    disabled ? log("AI grader disabled.", "success") : log("No AI grader found.", "info");
+
+    // 3. Uncheck / switch off AI grading toggles if present
+    const aiCheckboxes = document.querySelectorAll(
+      'input[name*="ai"][type="checkbox"]:checked, input[id*="ai"][type="checkbox"]:checked, input[aria-label*="AI"][type="checkbox"]:checked'
+    );
+    aiCheckboxes.forEach((cb) => {
+      cb.click();
+      disabledCount++;
+    });
+
+    // 4. Set persistent disable flag
+    sessionStorage.setItem("coursera_disable_ai_grader", "true");
+
+    if (disabledCount > 0) {
+      log(`AI grader disabled (${disabledCount} components removed/hidden).`, "success");
+    } else {
+      log("No active AI grader components found on this page.", "info");
+    }
   } catch (err) {
     log(`Error: ${err.message}`, "error");
   }
@@ -1744,7 +1793,7 @@ const Bt = ({ runAutomation: t, logs: e, showDataStream: o, setShowDataStream: i
           h(M, { label: "Copy questions", onClick: () => t("exportUnsolved"), variant: "secondary", isLight: r.isLight }),
           h(M, { label: "Auto grade", onClick: () => t("autoGrade"), variant: "secondary", isLight: r.isLight }),
           h(M, { label: "Fill Peer", onClick: () => t("fillPeer"), variant: "secondary", isLight: r.isLight }),
-          h(M, { label: "Disable grader", onClick: () => t("disableAIGrade"), variant: "danger", isLight: r.isLight }),
+          h(M, { label: "Disable AI Grader", onClick: () => t("disableAIGrade"), variant: "danger", isLight: r.isLight }),
           h(M, { label: "Review URL", onClick: () => t("copyReviewUrl"), variant: "secondary", isLight: r.isLight })
         ]
       }),
@@ -1875,6 +1924,11 @@ const Vt = () => {
           a("Resuming auto-skip for current module...", "progress");
           _("skipModule");
         }, 1500);
+      }
+      if (sessionStorage.getItem("coursera_disable_ai_grader") === "true") {
+        setTimeout(() => {
+          _("disableAIGrade");
+        }, 1000);
       }
     } catch {}
   }, []);
