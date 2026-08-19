@@ -971,7 +971,7 @@ const SkipFullCourse = async (log) => {
 // ==========================================
 
 async function queryGeminiApi(prompt, apiKey) {
-  const models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
+  const models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
   let lastError = null;
 
   for (const model of models) {
@@ -1466,7 +1466,7 @@ const Mt = Object.freeze({
 
 
 
-const qt = { theme: "light", geminiApiKey: "" };
+const qt = { theme: "light", geminiApiKey: "", geminiModel: "gemini-3.7-flash" };
 async function zt() {
   return new Promise((t) => {
     chrome.storage.local.get(["settings"], (e) => {
@@ -1639,7 +1639,7 @@ const ue = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-s
 const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) => {
   const [showKey, setShowKey] = P(!1);
   return h("div", {
-    className: "fade-in flex h-full flex-col gap-3 overflow-y-auto pr-0.5",
+    className: "fade-in flex h-full flex-col gap-2.5 overflow-y-auto pr-0.5",
     children: [
       h("div", {
         className: "flex items-center justify-between",
@@ -1658,7 +1658,7 @@ const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) => {
         ]
       }),
       h("div", {
-        className: `flex flex-col gap-1.5 rounded-lg border p-2.5 ${n.surface}`,
+        className: `flex flex-col gap-2 rounded-lg border p-2.5 ${n.surface}`,
         children: [
           h("div", {
             className: "flex items-center justify-between",
@@ -1683,9 +1683,35 @@ const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) => {
                 : "border-stone-700 bg-stone-950 text-stone-100 focus:border-emerald-500"
             }`
           }),
+          h("div", {
+            className: "flex flex-col gap-1 pt-0.5",
+            children: [
+              h("span", { className: `text-[10.5px] font-semibold ${n.text}`, children: "Gemini Model" }),
+              h(
+                "select",
+                {
+                  value: t.geminiModel || "gemini-3.7-flash",
+                  onChange: (ev) => e({ ...t, geminiModel: ev.target.value }),
+                  className: `w-full rounded border px-2 py-1 text-[10.5px] font-sans outline-none transition-colors ${
+                    n.isLight
+                      ? "border-stone-300 bg-white text-stone-800 focus:border-emerald-600"
+                      : "border-stone-700 bg-stone-900 text-stone-100 focus:border-emerald-500"
+                  }`,
+                  children: [
+                    h("option", { value: "gemini-3.7-flash", children: "Gemini 3.7 Flash (Default - Best)" }),
+                    h("option", { value: "gemini-3.6-flash", children: "Gemini 3.6 Flash" }),
+                    h("option", { value: "gemini-3.5-flash", children: "Gemini 3.5 Flash" }),
+                    h("option", { value: "gemini-3.5-flash-lite", children: "Gemini 3.5 Flash Lite" }),
+                    h("option", { value: "gemini-3.1-flash-lite", children: "Gemini 3.1 Flash Lite" }),
+                    h("option", { value: "auto", children: "Auto Fallback (Try All)" })
+                  ]
+                }
+              )
+            ]
+          }),
           h("span", {
             className: `text-[9.5px] leading-tight ${n.faint}`,
-            children: "Used for AI Auto Solve Quiz (Get key at aistudio.google.com)"
+            children: "Used for AI Auto Solve Quiz (Free key at aistudio.google.com)"
           })
         ]
       }),
@@ -1720,13 +1746,12 @@ const Je = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-s
 const Vt = () => {
   const [t, e] = P("main"),
     [o, i] = P(!1),
-    [n, r] = P(!0), // Show console = true by default
-    [s, c] = P({ theme: "light", geminiApiKey: "" }),
+    [n, r] = P(!0),
+    [s, c] = P({ theme: "light", geminiApiKey: "", geminiModel: "gemini-3.7-flash" }),
     { logs: d, latestStatus: l, statusType: p, addLog: a, clearLogs: m } = Ot(),
     u = Ht(s);
   Me(() => {
     zt().then(c);
-    // Check auto-skip continuation
     try {
       const slug = getCourseSlug();
       if (slug && sessionStorage.getItem("coursera_auto_skip") === slug) {
@@ -1754,7 +1779,7 @@ const Vt = () => {
     };
   return h("div", {
     className: `fixed bottom-6 right-6 z-[2147483647] flex w-80 flex-col overflow-hidden rounded-lg border font-sans shadow-md transition-all duration-200 ${
-      o ? "h-11" : n ? "h-[490px]" : t === "settings" ? "h-[360px]" : "h-[380px]"
+      o ? "h-11" : n ? "h-[500px]" : t === "settings" ? "h-[390px]" : "h-[380px]"
     } ${u.panel} ${u.text}`,
     children: [
       h("div", {
