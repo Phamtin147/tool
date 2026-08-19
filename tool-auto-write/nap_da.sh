@@ -9,30 +9,35 @@ if [ ! -f "$FILE_DAP_AN" ]; then
     exit 1
 fi
 
+# Đảm bảo socket có quyền ghi
+if [ -S "$YDOTOOL_SOCKET" ]; then
+    sudo chmod 666 "$YDOTOOL_SOCKET" 2>/dev/null
+fi
+
 # Tự động start ydotoold nếu chưa chạy
 if ! ydotool key 0 &>/dev/null; then
     echo "Đang khởi động ydotoold..."
     sudo ydotoold --socket-path /tmp/.ydotool_socket --socket-perm 0666 &
-    sleep 1  # Chờ daemon sẵn sàng
+    sleep 1.5
+    sudo chmod 666 /tmp/.ydotool_socket 2>/dev/null
 
-    # Kiểm tra lại
     if ! ydotool key 0 &>/dev/null; then
-        echo "Lỗi: Không thể khởi động ydotoold."
-        echo "Thử chạy thủ công: sudo usermod -aG input \$USER rồi logout/login lại"
+        echo "Lỗi: Không thể kết nối ydotoold."
+        echo "Hãy chạy thủ công lệnh sau trên Terminal trước khi chạy script:"
+        echo "  sudo ydotoold --socket-path /tmp/.ydotool_socket --socket-perm 0666 &"
+        echo "  sudo chmod 666 /tmp/.ydotool_socket"
         exit 1
     fi
     echo "ydotoold đã sẵn sàng!"
 fi
 
-echo "Chuẩn bị... Bạn có $SLEEP_TIME giây để click vào máy ảo!"
-sleep $SLEEP_TIME
+echo "Chuẩn bị... Bạn có $SLEEP_TIME giây để click vào cửa sổ máy ảo / ô nhập liệu!"
+for ((i=SLEEP_TIME; i>0; i--)); do
+    echo "Bắt đầu gõ sau: $i giây..."
+    sleep 1
+done
 
-# Kiểm tra ydotoold có đang chạy không
-if ! ydotool key 0 &>/dev/null; then
-    echo "Lỗi: ydotoold chưa chạy! Hãy chạy: sudo ydotoold --socket-path /tmp/.ydotool_socket --socket-perm 0666"
-    exit 1
-fi
+echo "Đang tự động gõ nội dung..."
+ydotool type --key-delay 60 --file "$FILE_DAP_AN"
 
-ydotool type --key-delay 80 --file "$FILE_DAP_AN"
-
-echo "Đã bắn xong đáp án!"
+echo "Đã gõ xong toàn bộ nội dung trong dapan.txt!"
