@@ -56,6 +56,37 @@ const vt = {
   VERSION: "902d11358ca4c08e177c1e3eac11ffe41c92f674"
 };
 
+// Sound Notification helper (Web Audio API)
+function playSuccessChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [523.25, 659.25, 1046.5]; // C5, E5, C6 (Bright success chord)
+    notes.forEach((freq, index) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const startTime = ctx.currentTime + index * 0.1;
+      const duration = 0.35;
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.05);
+    });
+  } catch (e) {
+    console.error("Could not play chime:", e);
+  }
+}
+
 // Sleep helpers
 const Ge = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const A = (base, jitter = 200) => {
@@ -1304,6 +1335,7 @@ Respond ONLY in valid JSON format:
   }
 
   log(`AI Quiz Solving finished. Answered ${solvedCount}/${parsedQuestions.length} questions.`, "success");
+  playSuccessChime();
 };
 
 // Auto grade action
@@ -1345,6 +1377,7 @@ const Ut = async (log) => {
       submitBtn.click();
     }
     log("Grading complete.", "success");
+    playSuccessChime();
   } catch (err) {
     log(`Grading failed: ${err.message}`, "error");
   }
@@ -1474,6 +1507,7 @@ const Lt = async (log) => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     log(`Downloaded ${results.length} questions to file.`, "success");
+    playSuccessChime();
   } catch (err) {
     log(`Download failed: ${err.message}`, "error");
   }
@@ -1491,6 +1525,7 @@ const Dt = async (log) => {
     const jsonStr = JSON.stringify(results, null, 2);
     await navigator.clipboard.writeText(jsonStr);
     log(`Copied ${results.length} questions to clipboard.`, "success");
+    playSuccessChime();
   } catch (err) {
     log(`Copy failed: ${err.message}`, "error");
   }
@@ -1580,6 +1615,7 @@ const Pt = async (log) => {
     });
     if (submitRes.ok) {
       log("Peer submission completed.", "success");
+      playSuccessChime();
       setTimeout(() => window.location.reload(), 2000);
     } else {
       throw new Error(`Submit rejected: ${submitRes.status}`);
@@ -1618,13 +1654,14 @@ async function At(log) {
     }
   });
   log("UI fill sequence complete.", "success");
+  playSuccessChime();
 }
 
 // Review URL copy
 const copyReviewUrl = async (log) => {
   try {
     const courseSlug = getCourseSlug();
-    const peerMatch = window.location.pathname.match(/\/peer\/([^/]+)\/([^/]+)/);
+    const peerMatch = window.location.pathname.match(/\/peer\/([^/]+)/);
     const itemId = peerMatch ? peerMatch[1] : null;
     const assignSlug = peerMatch ? peerMatch[2] : null;
 
@@ -1646,6 +1683,7 @@ const copyReviewUrl = async (log) => {
     await navigator.clipboard.writeText(reviewUrl);
     log("Review URL copied to clipboard.", "success");
     log(`URL: ${reviewUrl}`, "info");
+    playSuccessChime();
   } catch (err) {
     log(`Failed to copy URL: ${err.message}`, "error");
   }
