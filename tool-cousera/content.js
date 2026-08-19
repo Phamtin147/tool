@@ -713,7 +713,8 @@ class Ct {
     const assignmentId = schema.id.split("~").pop();
     await ctx.put(`/api/onDemandPeerSubmissionDrafts.v1/${ctx.userId}~${ctx.courseId}~${item.id}/`, {
       submission: { title, parts },
-      attachedAssignmentId: assignmentId
+      attachedAssignmentId: assignmentId,
+      gradingType: "HUMAN"
     });
     await A(1000, 500);
     const submitRes = await ctx.post("/api/onDemandPeerSubmissions.v1/", {
@@ -722,7 +723,7 @@ class Ct {
       gradingType: "HUMAN"
     });
     if (submitRes.ok) {
-      ctx.log("Peer assignment submitted successfully", "success");
+      ctx.log("Peer assignment submitted successfully (HUMAN mode).", "success");
     } else {
       ctx.log(`Peer submit status: ${submitRes.status}`, "info");
     }
@@ -1349,11 +1350,16 @@ const Ut = async (log) => {
   }
 };
 
-// Comprehensive Disable AI Grader (with page reload)
+// Comprehensive Disable AI Grader (with interceptor & page reload)
 const Tt = async (log) => {
   try {
-    log("Disabling AI grading on assignment...", "progress");
+    log("Blocking AI Grader & Switching to Human Review...", "progress");
     let actionsTaken = 0;
+
+    // Set permanent disable flags
+    sessionStorage.setItem("coursera_disable_ai_grader", "true");
+    localStorage.setItem("coursera_disable_ai_grader", "true");
+    localStorage.setItem("coursera:ai_grade_opt_out", "true");
 
     const findClickable = (keywords) => {
       const candidates = Array.from(
@@ -1400,86 +1406,7 @@ const Tt = async (log) => {
       }
     }
 
-    // 2. Select any HUMAN / PEER radio options or uncheck AI toggles
-    const inputs = Array.from(document.querySelectorAll("input[type='radio'], input[type='checkbox']"));
-    for (const inp of inputs) {
-      const val = (inp.value || inp.name || inp.id || "").toLowerCase();
-      const parentLabel = (inp.closest("label")?.innerText || inp.parentElement?.innerText || "").toLowerCase();
-
-      if (
-        val.includes("human") ||
-        val.includes("peer") ||
-        parentLabel.includes("human") ||
-        parentLabel.includes("peer") ||
-        parentLabel.includes("bạn học") ||
-        parentLabel.includes("ngang hàng")
-      ) {
-        if (!inp.checked) {
-          inp.click();
-          inp.dispatchEvent(new Event("change", { bubbles: true }));
-          actionsTaken++;
-          log("Selected Human / Peer grading radio.", "success");
-        }
-      }
-
-      if (val.includes("ai") || parentLabel.includes("ai") || parentLabel.includes("trí tuệ nhân tạo")) {
-        if (inp.type === "checkbox" && inp.checked) {
-          inp.click();
-          inp.dispatchEvent(new Event("change", { bubbles: true }));
-          actionsTaken++;
-          log("Disabled AI grading checkbox.", "success");
-        }
-      }
-    }
-
-    // 3. Remove / Hide AI Grader UI blocks and banners
-    const aiSelectors = [
-      ".rc-AIGradeInstruction",
-      ".css-8h7v9a",
-      ".rc-AiFeedbackContainer",
-      "[data-testid*='ai-grade']",
-      "[data-testid*='ai-grading']",
-      "[data-testid*='ai-evaluator']",
-      "[data-testid*='ai-evaluation']",
-      "[data-testid*='ai-feedback']",
-      "[data-testid*='ai-review']",
-      "[class*='AIGrade']",
-      "[class*='AiGrading']",
-      "[class*='ai-grading']",
-      "[class*='AiReview']",
-      "[class*='ai-feedback']",
-      "[class*='ai-coach']",
-      "[class*='ai-evaluation']",
-      "div[id*='ai-grader']",
-      "div[id*='ai-grading']",
-      "div[aria-label*='AI grading']",
-      "div[aria-label*='AI Graded']"
-    ];
-
-    const elements = document.querySelectorAll(aiSelectors.join(", "));
-    elements.forEach((el) => {
-      el.style.display = "none";
-      el.setAttribute("aria-hidden", "true");
-      actionsTaken++;
-    });
-
-    // 4. Remove AI grader scripts
-    const scripts = Array.from(document.querySelectorAll("script"));
-    for (const s of scripts) {
-      const content = (s.src || "") + (s.innerText || "");
-      if (
-        content.includes("ai-grader") ||
-        content.includes("ai-grading") ||
-        content.includes("ai-assessment") ||
-        content.includes("GradingPolicy") ||
-        content.includes("aiFeedback")
-      ) {
-        s.remove();
-        actionsTaken++;
-      }
-    }
-
-    // 5. Direct API opt-out if on a peer assignment page
+    // 2. Direct API opt-out if on a peer assignment page
     try {
       const userId = await Oe();
       const courseId = Fe();
@@ -1519,12 +1446,8 @@ const Tt = async (log) => {
       }
     } catch {}
 
-    sessionStorage.setItem("coursera_disable_ai_grader", "true");
-    localStorage.setItem("coursera_disable_ai_grader", "true");
-    localStorage.setItem("coursera:ai_grade_opt_out", "true");
-
-    log("AI grading disabled. Reloading page to apply changes...", "success");
-    await A(1200, 300);
+    log("AI Grader permanently blocked. Reloading page with Interceptor active...", "success");
+    await A(1000, 200);
     window.location.reload();
   } catch (err) {
     log(`Error: ${err.message}`, "error");
@@ -1644,7 +1567,8 @@ const Pt = async (log) => {
     log("Synchronizing draft...", "progress");
     await ctx.put(`/api/onDemandPeerSubmissionDrafts.v1/${userId}~${courseId}~${itemId}/`, {
       submission: { title: "Peer Project", parts },
-      attachedAssignmentId: assignmentId
+      attachedAssignmentId: assignmentId,
+      gradingType: "HUMAN"
     });
     await A(1000, 500);
 
