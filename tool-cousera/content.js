@@ -1349,10 +1349,10 @@ const Ut = async (log) => {
   }
 };
 
-// Comprehensive Disable AI Grader
+// Comprehensive Disable AI Grader (with page reload)
 const Tt = async (log) => {
   try {
-    log("Scanning for AI grading & Switch to Peer options...", "progress");
+    log("Disabling AI grading on assignment...", "progress");
     let actionsTaken = 0;
 
     const findClickable = (keywords) => {
@@ -1387,15 +1387,15 @@ const Tt = async (log) => {
         log(`Found option: "${btn.innerText.trim().slice(0, 35)}". Clicking...`, "progress");
         btn.click();
         actionsTaken++;
-        await A(500, 300);
+        await A(400, 200);
 
         const modalBtns = findClickable(["confirm", "xác nhận", "switch", "chuyển", "yes", "đồng ý", "continue"]);
         const modalConfirm = modalBtns.find((m) => m.closest("[role='dialog'], .cds-modal, [class*='modal'], [class*='dialog']"));
         if (modalConfirm) {
-          log("Confirming switch to peer grading in dialog...", "progress");
+          log("Confirming switch in dialog...", "progress");
           modalConfirm.click();
           actionsTaken++;
-          await A(500, 300);
+          await A(400, 200);
         }
       }
     }
@@ -1507,20 +1507,25 @@ const Tt = async (log) => {
           body: JSON.stringify({ courseId, itemId, gradingType: "HUMAN" })
         }).catch(() => {});
 
+        try {
+          await fetch(`/api/onDemandPeerSubmissionDrafts.v1/${userId}~${courseId}~${itemId}/`, {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({ attachedAssignmentId: itemId, gradingType: "HUMAN" })
+          });
+        } catch {}
+
         actionsTaken++;
-        log("Applied HUMAN / Peer grading mode via API.", "success");
       }
     } catch {}
 
     sessionStorage.setItem("coursera_disable_ai_grader", "true");
     localStorage.setItem("coursera_disable_ai_grader", "true");
+    localStorage.setItem("coursera:ai_grade_opt_out", "true");
 
-    if (actionsTaken > 0) {
-      log(`AI grading disabled successfully (${actionsTaken} actions executed).`, "success");
-    } else {
-      log("Note: If you have already submitted, look for 'Switch to peer grading' on your result page.", "info");
-      log("AI grader suppression applied.", "success");
-    }
+    log("AI grading disabled. Reloading page to apply changes...", "success");
+    await A(1200, 300);
+    window.location.reload();
   } catch (err) {
     log(`Error: ${err.message}`, "error");
   }
@@ -2029,11 +2034,6 @@ const Vt = () => {
           a("Resuming auto-skip for current module...", "progress");
           _("skipModule");
         }, 1500);
-      }
-      if (sessionStorage.getItem("coursera_disable_ai_grader") === "true") {
-        setTimeout(() => {
-          _("disableAIGrade");
-        }, 1000);
       }
     } catch {}
   }, []);
