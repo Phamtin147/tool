@@ -1107,89 +1107,37 @@ function parseGeminiQuizResponse(responseText, totalChoices) {
   return [];
 }
 
-// Robust element clicker that reliably activates both radio and checkbox on all Coursera exam layouts
+// Robust element clicker that reliably activates both radio and checkbox
 function setChoiceChecked(choice) {
   if (!choice) return;
   const { input, wrapper } = choice;
 
-  const triggerMouse = (el, type) => {
-    try {
-      el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-    } catch {}
-  };
-
   if (input) {
     if (!input.checked) {
-      triggerMouse(input, "mouseover");
-      triggerMouse(input, "mousedown");
-
       const label = input.closest("label") || wrapper;
       if (label && label !== input) {
         label.click();
       } else {
         input.click();
       }
-      triggerMouse(input, "mouseup");
-
       if (!input.checked) {
-        try {
-          const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "checked")?.set;
-          if (setter) {
-            setter.call(input, true);
-          } else {
-            input.checked = true;
-          }
-        } catch {
-          input.checked = true;
-        }
+        input.checked = true;
         input.dispatchEvent(new Event("change", { bubbles: true }));
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
     }
   } else if (wrapper) {
-    triggerMouse(wrapper, "mouseover");
-    triggerMouse(wrapper, "mousedown");
     wrapper.click();
-    triggerMouse(wrapper, "mouseup");
-    if (wrapper.getAttribute("role") === "radio" || wrapper.getAttribute("role") === "checkbox") {
-      wrapper.setAttribute("aria-checked", "true");
-    }
   }
 
   if (wrapper) {
-    wrapper.style.outline = "2.5px solid #10b981";
-    wrapper.style.backgroundColor = "rgba(16, 185, 129, 0.08)";
-    wrapper.style.borderRadius = "8px";
-    wrapper.style.transition = "all 0.2s ease";
+    wrapper.style.outline = "2px solid #10b981";
+    wrapper.style.borderRadius = "6px";
   }
 }
 
-// Helper to extract clean text including code blocks and formulas
-function extractCleanContent(element) {
-  if (!element) return "";
-  const clone = element.cloneNode(true);
-
-  // Preserve code blocks
-  clone.querySelectorAll("pre, code").forEach((codeEl) => {
-    const codeText = codeEl.innerText.trim();
-    if (codeText) codeEl.innerText = `\n\`\`\`\n${codeText}\n\`\`\`\n`;
-  });
-
-  // Preserve image alt text
-  clone.querySelectorAll("img").forEach((img) => {
-    const alt = img.getAttribute("alt") || img.getAttribute("aria-label");
-    if (alt) {
-      const span = document.createElement("span");
-      span.innerText = ` [Image: ${alt}] `;
-      img.parentNode?.replaceChild(span, img);
-    }
-  });
-
-  return clone.innerText.replace(/\r\n/g, "\n").trim();
-}
-
 const solveQuizWithGemini = async (log) => {
-  log("Scanning quiz questions on active exam page...", "progress");
+  log("Scanning quiz questions on page...", "progress");
 
   const settings = await zt();
   let apiKey = settings.geminiApiKey;
@@ -1200,58 +1148,27 @@ const solveQuizWithGemini = async (log) => {
   apiKey = apiKey.trim();
   const selectedModel = settings.geminiModel || "gemini-3.7-flash";
 
-  // Comprehensive selectors covering standard quizzes, tunnel vision exams, and CDS assessment forms
+  // Find all question containers
   const containerSelectors = [
     ".rc-FormPartsQuestion",
     ".rc-QuizQuestion",
     '[data-testid="part-container"]',
-    '[data-testid="part-Question"]',
-    '[data-testid*="quiz-question"]',
-    '[data-testid*="assessment-question"]',
     'div[class*="FormPartsQuestion"]',
-    'div[class*="QuizQuestion"]',
-    'div[class*="TunnelVision"]',
-    'div[class*="cds-formGroup"]',
-    'div[role="radiogroup"]',
-    'div[role="group"]',
-    "fieldset",
     ".css-1erl2aq",
-    'div[id^="question-"]',
-    'div[id^="prompt-"]',
-    'div[id^="part-"]'
+    'div[id^="question-"]'
   ];
-
-  let allContainers = Array.from(document.querySelectorAll(containerSelectors.join(", ")));
-
-  // Fallback: If no preset containers matched, find all radio/checkbox groups dynamically
-  if (allContainers.length === 0) {
-    const allInputs = Array.from(
-      document.querySelectorAll(
-        'input[type="radio"], input[type="checkbox"], [role="radio"], [role="checkbox"], .cds-radio-input, .cds-checkbox-input'
-      )
-    );
-    const parentGroups = new Set();
-    allInputs.forEach((inp) => {
-      const groupParent =
-        inp.closest("fieldset, div[role='radiogroup'], div[role='group'], form, div[class*='question'], div[id*='question']") ||
-        inp.parentElement?.parentElement;
-      if (groupParent) parentGroups.add(groupParent);
-    });
-    allContainers = Array.from(parentGroups);
-  }
-
+  const allContainers = Array.from(document.querySelectorAll(containerSelectors.join(", ")));
   const validContainers = [];
+
   allContainers.forEach((c) => {
-    const inputs = c.querySelectorAll(
-      'input[type="radio"], input[type="checkbox"], [role="radio"], [role="checkbox"], .cds-radio-input, .cds-checkbox-input'
-    );
+    const inputs = c.querySelectorAll('input[type="radio"], input[type="checkbox"]');
     if (inputs.length > 0 && !validContainers.includes(c)) {
       validContainers.push(c);
     }
   });
 
   if (validContainers.length === 0) {
-    log("No quiz or exam questions detected on this page.", "error");
+    log("No quiz questions found on active page.", "error");
     return;
   }
 
@@ -1267,50 +1184,30 @@ const solveQuizWithGemini = async (log) => {
     const qBody =
       container.querySelector(U.QUESTION_BODY) ||
       container.querySelector(U.CML_CONTENT) ||
-      container.querySelector('[data-testid="question-prompt"]') ||
-      container.querySelector('[data-testid="cml-viewer"]') ||
-      container.querySelector("legend") ||
-      container.querySelector("h3, h4, p");
-    let questionText = qBody ? extractCleanContent(qBody) : extractCleanContent(container).split("\n")[0];
-    questionText = questionText
-      .replace(/^\d+\.\nQuestion \d+\n\n/, "")
-      .replace(/^Question \d+\n+/, "")
-      .replace(/^\d+\.\s*/, "")
-      .trim();
+      container.querySelector('[data-testid="question-prompt"]');
+    let questionText = qBody ? qBody.innerText.trim() : container.innerText.split("\n")[0];
+    questionText = questionText.replace(/^\d+\.\nQuestion \d+\n\n/, "").replace(/^Question \d+\n+/, "").trim();
 
-    // 2. Choices extraction
-    const inputElements = Array.from(
-      container.querySelectorAll(
-        'input[type="radio"], input[type="checkbox"], [role="radio"], [role="checkbox"], .cds-radio-input, .cds-checkbox-input'
-      )
-    );
+    // 2. Choices extraction (Directly find all inputs to avoid missing checkbox groups)
+    const inputs = Array.from(container.querySelectorAll('input[type="radio"], input[type="checkbox"]'));
     const choicesData = [];
-    const isMultiSelect =
-      inputElements.some((inp) => inp.type === "checkbox" || inp.getAttribute("role") === "checkbox") ||
-      questionText.toLowerCase().includes("select all") ||
-      questionText.toLowerCase().includes("chọn tất cả");
+    const isMultiSelect = inputs.some((inp) => inp.type === "checkbox") || questionText.toLowerCase().includes("select all");
 
-    inputElements.forEach((inp, oIdx) => {
-      const parentLabel =
-        inp.closest("label") || inp.closest(".rc-Option") || inp.closest('[data-testid*="option"]') || inp.parentElement;
+    inputs.forEach((inp, oIdx) => {
+      const parentLabel = inp.closest("label") || inp.closest(".rc-Option") || inp.parentElement;
       const labelEl =
         parentLabel?.querySelector(U.CHOICE_LABEL) ||
         parentLabel?.querySelector(".rc-CML") ||
         parentLabel?.querySelector(".cds-checkboxAndRadio-labelText") ||
-        parentLabel?.querySelector('[data-testid="cml-viewer"]') ||
         parentLabel?.querySelector("span");
-      const choiceText = labelEl
-        ? extractCleanContent(labelEl)
-        : parentLabel
-        ? extractCleanContent(parentLabel)
-        : `Option ${oIdx + 1}`;
+      const choiceText = labelEl ? labelEl.innerText.trim() : parentLabel?.innerText?.trim() || `Option ${oIdx + 1}`;
 
       choicesData.push({
         index: oIdx + 1,
         text: choiceText,
         wrapper: parentLabel || inp,
-        input: inp.tagName.toLowerCase() === "input" ? inp : null,
-        isCheckbox: inp.type === "checkbox" || inp.getAttribute("role") === "checkbox"
+        input: inp,
+        isCheckbox: inp.type === "checkbox"
       });
     });
 
@@ -1323,12 +1220,10 @@ const solveQuizWithGemini = async (log) => {
     });
   }
 
-  // Build Batch Prompt
+  // Build Batch Prompt with explicit Multi-Select / Single-Choice notices
   const qBlocks = parsedQuestions
     .map((q) => {
-      const typeNotice = q.isMultiSelect
-        ? " [MULTI-SELECT: Choose ALL correct options]"
-        : " [SINGLE-CHOICE: Choose 1 option]";
+      const typeNotice = q.isMultiSelect ? " [MULTI-SELECT: Choose ALL correct options]" : " [SINGLE-CHOICE: Choose 1 option]";
       const choicesText = q.choicesData.map((c) => `  ${c.index}. ${c.text}`).join("\n");
       return `--- Question ${q.qNumber}${typeNotice} ---
 ${q.questionText}
@@ -1337,7 +1232,7 @@ ${choicesText}`;
     })
     .join("\n\n");
 
-  const batchPrompt = `You are an expert AI quiz solver. Solve ALL the following multiple-choice questions accurately.
+  const batchPrompt = `You are an expert AI quiz solver. Solve ALL the following multiple-choice questions.
 Some questions are SINGLE-CHOICE (1 answer), and some questions are MULTI-SELECT (multiple correct answers).
 For multi-select questions, you MUST include ALL correct choices in the "correct_indices" array.
 
@@ -1352,7 +1247,7 @@ Respond ONLY in valid JSON format:
 }
 where "correct_indices" are the 1-based indices of the correct choices for that question. Do not include markdown or extra explanations.`;
 
-  log(`Sending all ${parsedQuestions.length} questions to Gemini AI (${selectedModel})...`, "progress");
+  log(`Sending all ${parsedQuestions.length} questions to Gemini...`, "progress");
 
   let solvedCount = 0;
 
@@ -1396,9 +1291,7 @@ where "correct_indices" are the 1-based indices of the correct choices for that 
   // Fallback for any remaining unanswered questions
   if (solvedCount < parsedQuestions.length) {
     const remainingQuestions = parsedQuestions.filter((q) => {
-      const checkedInputs = q.container.querySelectorAll(
-        'input:checked, input[type="radio"]:checked, input[type="checkbox"]:checked, [aria-checked="true"]'
-      );
+      const checkedInputs = q.container.querySelectorAll('input:checked, input[type="radio"]:checked, input[type="checkbox"]:checked');
       return checkedInputs.length === 0;
     });
 
@@ -2133,7 +2026,7 @@ const Vt = () => {
             className: "flex items-center gap-1.5",
             children: [
               h("span", { className: `text-xs font-bold tracking-tight ${u.text}`, children: "Coursera AutoPilot" }),
-              h("span", { className: `text-[10px] px-1.5 py-0.5 rounded font-mono ${u.surface} ${u.muted}`, children: "v1.4.0" })
+              h("span", { className: `text-[10px] px-1.5 py-0.5 rounded font-mono ${u.surface} ${u.muted}`, children: "v1.3.0" })
             ]
           }),
           h("div", {
@@ -2205,65 +2098,7 @@ const Vt = () => {
 
 
 
-const Qt = '*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-scale-x: 1;--tw-scale-y: 1;box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}:before,:after{--tw-content: ""}html,:host{line-height:1.5;-webkit-text-size-adjust:100%;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif}button,input,select,textarea{font-family:inherit;font-size:100%;margin:0;padding:0}.fixed{position:fixed}.bottom-6{bottom:1.5rem}.right-6{right:1.5rem}.z-\\[2147483647\\]{z-index:2147483647}.col-span-2{grid-column:span 2 / span 2}.flex{display:flex}.grid{display:grid}.h-11{height:2.75rem}.h-\\[500px\\]{height:500px}.h-\\[390px\\]{height:390px}.h-\\[380px\\]{height:380px}.h-full{height:100%}.max-h-\\[160px\\]{max-height:160px}.w-80{width:20rem}.w-full{width:100%}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.gap-1{gap:.25rem}.gap-1\\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-2\\.5{gap:.625rem}.gap-3{gap:.75rem}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:.25rem}.rounded-md{border-radius:.375rem}.rounded-lg{border-radius:.5rem}.rounded-full{border-radius:9999px}.border{border-width:1px}.border-t{border-top-width:1px}.border-stone-100{border-color:#f5f5f4}.border-stone-200{border-color:#e7e5e4}.border-stone-300{border-color:#d6d3d1}.border-stone-700{border-color:#44403c}.border-stone-800{border-color:#292524}.border-emerald-300{border-color:#6ee7b7}.border-emerald-600{border-color:#059669}.bg-white{background-color:#ffffff}.bg-stone-50{background-color:#fafaf9}.bg-stone-100{background-color:#f5f5f4}.bg-stone-200{background-color:#e7e5e4}.bg-stone-700{background-color:#44403c}.bg-stone-800{background-color:#292524}.bg-stone-900{background-color:#1c1917}.bg-stone-950{background-color:#0c0a09}.bg-emerald-50{background-color:#ecfdf5}.bg-emerald-500{background-color:#10b981}.bg-emerald-950\\/60{background-color:rgba(2,44,34,0.6)}.bg-red-500{background-color:#ef4444}.bg-blue-500{background-color:#3b82f6}.p-1\\.5{padding:.375rem}.p-2\\.5{padding:.625rem}.p-3{padding:.75rem}.px-1\\.5{padding-left:.375rem;padding-right:.375rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\\.5{padding-left:.625rem;padding-right:.625rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-3\\.5{padding-left:.875rem;padding-right:.875rem}.px-4{padding-left:1rem;padding-right:1rem}.py-0\\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-1\\.5{padding-top:.375rem;padding-bottom:.375rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-2\\.5{padding-top:.625rem;padding-bottom:.625rem}.pb-3{padding-bottom:.75rem}.pt-0\\.5{padding-top:.125rem}.pt-1{padding-top:.25rem}.pt-2{padding-top:.5rem}.text-\\[9\\.5px\\]{font-size:9.5px}.text-\\[10px\\]{font-size:10px}.text-\\[10\\.5px\\]{font-size:10.5px}.text-\\[11px\\]{font-size:11px}.text-xs{font-size:.75rem;line-height:1rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.font-bold{font-weight:700}.font-mono{font-family:ui-monospace,SF Mono,monospace}.font-sans{font-family:system-ui,-apple-system,sans-serif}.tracking-tight{letter-spacing:-.025em}.text-stone-100{color:#f5f5f4}.text-stone-200{color:#e7e5e4}.text-stone-300{color:#d6d3d1}.text-stone-400{color:#a8a29e}.text-stone-500{color:#78716c}.text-stone-600{color:#57534e}.text-stone-700{color:#44403c}.text-stone-800{color:#292524}.text-stone-900{color:#1c1917}.text-emerald-400{color:#34d399}.text-emerald-700{color:#047857}.text-emerald-800{color:#065f46}.text-red-400{color:#f87171}.text-red-600{color:#dc2626}.text-red-700{color:#b91c1c}.text-blue-400{color:#60a5fa}.text-blue-700{color:#1d4ed8}.text-white{color:#ffffff}.shadow-md{box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)}.transition-all{transition-property:all;transition-duration:.2s}.transition-colors{transition-property:color,background-color,border-color;transition-duration:.15s}';
-
-// Floating toast notification helper
-function showAutoPilotToast(message, type = "info") {
-  try {
-    const existing = document.getElementById("coursera-autopilot-toast");
-    if (existing) existing.remove();
-
-    const toast = document.createElement("div");
-    toast.id = "coursera-autopilot-toast";
-    const bg = type === "success" ? "#065f46" : type === "error" ? "#991b1b" : "#1e293b";
-    toast.style.cssText = `
-      position: fixed;
-      top: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: ${bg};
-      color: #ffffff;
-      padding: 10px 22px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-weight: 600;
-      z-index: 2147483647;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      pointer-events: none;
-      transition: all 0.2s ease;
-    `;
-    toast.innerText = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      if (toast && toast.parentNode) {
-        toast.remove();
-      }
-    }, 3500);
-  } catch {}
-}
-
-// Global hotkey listener (Alt + S or Ctrl + Shift + S) for 1-click exam solving
-window.addEventListener("keydown", (e) => {
-  const isAltS = e.altKey && e.key.toLowerCase() === "s";
-  const isCtrlShiftS = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "s";
-  if (isAltS || isCtrlShiftS) {
-    e.preventDefault();
-    e.stopPropagation();
-    showAutoPilotToast("⚡ AI Scanning & Solving Quiz...", "info");
-    solveQuizWithGemini((msg, type) => {
-      console.log(`[AutoPilot] ${msg}`);
-      if (type === "success" || type === "error") {
-        showAutoPilotToast(msg, type);
-      }
-    });
-  }
-}, true);
-
+const Qt = '*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness: proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width: 0px;--tw-ring-offset-color: #fff;--tw-ring-color: rgb(59 130 246 / .5);--tw-ring-offset-shadow: 0 0 #0000;--tw-ring-shadow: 0 0 #0000;--tw-shadow: 0 0 #0000;--tw-shadow-colored: 0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness: proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width: 0px;--tw-ring-offset-color: #fff;--tw-ring-color: rgb(59 130 246 / .5);--tw-ring-offset-shadow: 0 0 #0000;--tw-ring-shadow: 0 0 #0000;--tw-shadow: 0 0 #0000;--tw-shadow-colored: 0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }*,:before,:after{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}:before,:after{--tw-content: ""}html,:host{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:ui-monospace,SF Mono,Cascadia Code,Consolas,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dl,dd,h1,h2,h3,h4,h5,h6,hr,figure,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}ol,ul,menu{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}button,[role=button]{cursor:pointer}:disabled{cursor:default}img,svg,video,canvas,audio,iframe,embed,object{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.custom-scrollbar::-webkit-scrollbar{width:4px;height:4px}.custom-scrollbar::-webkit-scrollbar-track{background:transparent}.custom-scrollbar::-webkit-scrollbar-thumb{border-radius:9999px;--tw-bg-opacity: 1;background-color:rgb(214 211 209 / var(--tw-bg-opacity, 1))}.custom-scrollbar-dark::-webkit-scrollbar-thumb{border-radius:9999px;--tw-bg-opacity: 1;background-color:rgb(68 64 60 / var(--tw-bg-opacity, 1))}.fade-in{animation:fadeIn .15s ease-out both}@keyframes fadeIn{0%{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}.container{width:100%}@media (min-width: 640px){.container{max-width:640px}}@media (min-width: 768px){.container{max-width:768px}}@media (min-width: 1024px){.container{max-width:1024px}}@media (min-width: 1280px){.container{max-width:1280px}}@media (min-width: 1536px){.container{max-width:1536px}}.fixed{position:fixed}.relative{position:relative}.bottom-6{bottom:1.5rem}.right-6{right:1.5rem}.z-\\[2147483647\\]{z-index:2147483647}.col-span-2{grid-column:span 2 / span 2}.mt-1\\.5{margin-top:.375rem}.mt-auto{margin-top:auto}.block{display:block}.flex{display:flex}.grid{display:grid}.contents{display:contents}.h-1\\.5{height:.375rem}.h-11{height:2.75rem}.h-\\[300px\\]{height:300px}.h-\\[320px\\]{height:320px}.h-\\[460px\\]{height:460px}.h-full{height:100%}.max-h-\\[160px\\]{max-height:160px}.min-h-\\[280px\\]{min-height:280px}.w-1\\.5{width:.375rem}.w-80{width:20rem}.w-full{width:100%}.max-w-\\[220px\\]{max-width:220px}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-0\\.5{gap:.125rem}.gap-1{gap:.25rem}.gap-1\\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-2\\.5{gap:.625rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.space-y-1\\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.375rem * var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem * var(--tw-space-y-reverse))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse: 0;margin-top:calc(.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.border{border-width:1px}.border-t{border-top-width:1px}.border-stone-100{--tw-border-opacity: 1;border-color:rgb(245 245 244 / var(--tw-border-opacity, 1))}.border-stone-200{--tw-border-opacity: 1;border-color:rgb(231 229 228 / var(--tw-border-opacity, 1))}.border-stone-700{--tw-border-opacity: 1;border-color:rgb(68 64 60 / var(--tw-border-opacity, 1))}.border-stone-800{--tw-border-opacity: 1;border-color:rgb(41 37 36 / var(--tw-border-opacity, 1))}.bg-blue-50{--tw-bg-opacity: 1;background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))}.bg-blue-500{--tw-bg-opacity: 1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-emerald-50{--tw-bg-opacity: 1;background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))}.bg-emerald-500{--tw-bg-opacity: 1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity: 1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-stone-100{--tw-bg-opacity: 1;background-color:rgb(245 245 244 / var(--tw-bg-opacity, 1))}.bg-stone-300{--tw-bg-opacity: 1;background-color:rgb(214 211 209 / var(--tw-bg-opacity, 1))}.bg-stone-50{--tw-bg-opacity: 1;background-color:rgb(250 250 249 / var(--tw-bg-opacity, 1))}.bg-stone-600{--tw-bg-opacity: 1;background-color:rgb(87 83 78 / var(--tw-bg-opacity, 1))}.bg-stone-800{--tw-bg-opacity: 1;background-color:rgb(41 37 36 / var(--tw-bg-opacity, 1))}.bg-stone-900{--tw-bg-opacity: 1;background-color:rgb(28 25 23 / var(--tw-bg-opacity, 1))}.bg-stone-950{--tw-bg-opacity: 1;background-color:rgb(12 10 9 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity: 1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.p-1\\.5{padding:.375rem}.p-3{padding:.75rem}.p-3\\.5{padding:.875rem}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\\.5{padding-left:.625rem;padding-right:.625rem}.px-3\\.5{padding-left:.875rem;padding-right:.875rem}.px-4{padding-left:1rem;padding-right:1rem}.py-0\\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1\\.5{padding-top:.375rem;padding-bottom:.375rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-2\\.5{padding-top:.625rem;padding-bottom:.625rem}.pb-3{padding-bottom:.75rem}.pr-0\\.5{padding-right:.125rem}.pt-2{padding-top:.5rem}.text-left{text-align:left}.text-center{text-align:center}.font-mono{font-family:ui-monospace,SF Mono,Cascadia Code,Consolas,monospace}.font-sans{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif}.text-\\[10\\.5px\\]{font-size:10.5px}.text-\\[10px\\]{font-size:10px}.text-\\[11px\\]{font-size:11px}.text-\\[12px\\]{font-size:12px}.text-base{font-size:1rem;line-height:1.5rem}.text-xs{font-size:.75rem;line-height:1rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.tabular-nums{--tw-numeric-spacing: tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-.025em}.text-blue-400{--tw-text-opacity: 1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.text-blue-700{--tw-text-opacity: 1;color:rgb(29 78 216 / var(--tw-text-opacity, 1))}.text-emerald-400{--tw-text-opacity: 1;color:rgb(52 211 153 / var(--tw-text-opacity, 1))}.text-emerald-700{--tw-text-opacity: 1;color:rgb(4 120 87 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity: 1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity: 1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-red-700{--tw-text-opacity: 1;color:rgb(185 28 28 / var(--tw-text-opacity, 1))}.text-stone-200{--tw-text-opacity: 1;color:rgb(231 229 228 / var(--tw-text-opacity, 1))}.text-stone-400{--tw-text-opacity: 1;color:rgb(168 162 158 / var(--tw-text-opacity, 1))}.text-stone-500{--tw-text-opacity: 1;color:rgb(120 113 108 / var(--tw-text-opacity, 1))}.text-stone-600{--tw-text-opacity: 1;color:rgb(87 83 78 / var(--tw-text-opacity, 1))}.text-stone-700{--tw-text-opacity: 1;color:rgb(68 64 60 / var(--tw-text-opacity, 1))}.text-stone-800{--tw-text-opacity: 1;color:rgb(41 37 36 / var(--tw-text-opacity, 1))}.text-stone-900{--tw-text-opacity: 1;color:rgb(28 25 23 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity: 1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.shadow{--tw-shadow: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);--tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000),var(--tw-ring-shadow, 0 0 #0000),var(--tw-shadow)}.shadow-md{--tw-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);--tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000),var(--tw-ring-shadow, 0 0 #0000),var(--tw-shadow)}.blur{--tw-blur: blur(8px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.transition-colors{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.duration-200{transition-duration:.2s}.hover\\:bg-emerald-50:hover{--tw-bg-opacity: 1;background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))}.hover\\:bg-red-50:hover{--tw-bg-opacity: 1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-100:hover{--tw-bg-opacity: 1;background-color:rgb(245 245 244 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-200:hover{--tw-bg-opacity: 1;background-color:rgb(231 229 228 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-50:hover{--tw-bg-opacity: 1;background-color:rgb(250 250 249 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-700:hover{--tw-bg-opacity: 1;background-color:rgb(68 64 60 / var(--tw-bg-opacity, 1))}.hover\\:bg-stone-800:hover{--tw-bg-opacity: 1;background-color:rgb(41 37 36 / var(--tw-bg-opacity, 1))}.hover\\:text-red-600:hover{--tw-text-opacity: 1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.hover\\:text-stone-200:hover{--tw-text-opacity: 1;color:rgb(231 229 228 / var(--tw-text-opacity, 1))}.hover\\:text-stone-300:hover{--tw-text-opacity: 1;color:rgb(214 211 209 / var(--tw-text-opacity, 1))}.hover\\:text-stone-600:hover{--tw-text-opacity: 1;color:rgb(87 83 78 / var(--tw-text-opacity, 1))}.hover\\:text-stone-700:hover{--tw-text-opacity: 1;color:rgb(68 64 60 / var(--tw-text-opacity, 1))}.focus-visible\\:outline-none:focus-visible{outline:2px solid transparent;outline-offset:2px}.focus-visible\\:ring-2:focus-visible{--tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow, 0 0 #0000)}.focus-visible\\:ring-stone-400\\/60:focus-visible{--tw-ring-color: rgb(168 162 158 / .6)}.focus-visible\\:ring-offset-1:focus-visible{--tw-ring-offset-width: 1px}';
 const pe = () => {
   if (document.getElementById("antigravity-root")) return;
   const t = document.createElement("div");

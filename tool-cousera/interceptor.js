@@ -1,52 +1,11 @@
-// Coursera AutoPilot Pro - AI Grader Blocker & Anti-Cheat Interceptor
+// Coursera AutoPilot Pro - AI Grader Blocker & Interceptor
 // Injected at document_start in MAIN world to intercept network and DOM before page scripts run
 
 (() => {
   if (window.__COURSERA_AI_BLOCKER_INSTALLED__) return;
   window.__COURSERA_AI_BLOCKER_INSTALLED__ = true;
 
-  console.log("[Coursera AutoPilot] AI Grader & Anti-Lockout Interceptor active.");
-
-  // 0. Anti-Cheat / Exam Lockout Defeater & Focus Spoofing
-  try {
-    // Spoof visibility & focus state so exam scripts never detect tab switches or blur
-    Object.defineProperty(document, "hidden", { get: () => false, configurable: true });
-    Object.defineProperty(document, "visibilityState", { get: () => "visible", configurable: true });
-    Object.defineProperty(document, "webkitVisibilityState", { get: () => "visible", configurable: true });
-    document.hasFocus = () => true;
-
-    // Block anti-cheat event listeners (visibilitychange, blur, focusout, pagehide, mouseleave)
-    const blockedEvents = new Set([
-      "visibilitychange",
-      "webkitvisibilitychange",
-      "blur",
-      "focusout",
-      "mouseleave",
-      "mouseout",
-      "pagehide"
-    ]);
-
-    const rawAddEventListener = EventTarget.prototype.addEventListener;
-    EventTarget.prototype.addEventListener = function (type, listener, options) {
-      if (this === window || this === document || this === document.body) {
-        if (blockedEvents.has(String(type).toLowerCase())) {
-          return; // Neutralize anti-cheat listener
-        }
-      }
-      return rawAddEventListener.call(this, type, listener, options);
-    };
-
-    // Unblock right-click, copy, paste, select, cut
-    const unblockHandler = (e) => {
-      e.stopImmediatePropagation();
-    };
-    ["contextmenu", "copy", "cut", "paste", "selectstart"].forEach((evt) => {
-      window.addEventListener(evt, unblockHandler, true);
-      document.addEventListener(evt, unblockHandler, true);
-    });
-  } catch (e) {
-    console.error("[Coursera AutoPilot] Anti-cheat spoofing error:", e);
-  }
+  console.log("[Coursera AutoPilot] AI Grader Interceptor active.");
 
   // 1. Inject immediate CSS to hide AI grader elements permanently
   const injectStyle = () => {
