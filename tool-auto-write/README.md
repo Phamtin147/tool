@@ -83,3 +83,11 @@ export YDOTOOL_SOCKET=/tmp/.ydotool_socket
 ### 2. Điều chỉnh tốc độ gõ hoặc thời gian chờ
 * **Thay đổi thời gian chờ click:** Mở file `nap_da.sh`, sửa dòng `SLEEP_TIME=5` thành số giây bạn muốn.
 * **Thay đổi tốc độ gõ:** Trong file `nap_da.sh`, sửa `--key-delay 60` (giảm xuống 30 nếu muốn gõ nhanh hơn, hoặc tăng lên 100 để gõ chậm hơn).
+
+---
+
+## 👤 Tác giả (Author)
+* **Amtia / Phamtin147**
+* GitHub: [@Phamtin147](https://github.com/Phamtin147)
+* Email: [huhume147@gmail.com](mailto:huhume147@gmail.com)
+

@@ -1,8 +1,10 @@
 #!/bin/bash
-
 # Setup auto-start service for ydotoold on boot (Systemd)
+# Developed by: Amtia / Phamtin147 (https://github.com/Phamtin147)
 
-echo "=== Cấu hình tự động chạy ydotoold khi mở máy ==="
+echo "=========================================================="
+echo "  Cấu hình tự động chạy ydotoold (by Amtia / Phamtin147)"
+echo "=========================================================="
 
 YDOTOOLD_PATH=$(which ydotoold)
 

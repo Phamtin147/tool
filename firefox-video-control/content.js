@@ -1,3 +1,12 @@
+/**
+ * LevelUp Video Control
+ * Manual video controls and automation for levelup.akajob.io
+ * 
+ * @author Amtia / Phamtin147 (https://github.com/Phamtin147)
+ */
+
+console.log("[LevelUp Video Control] Injected (Developed by Amtia / Phamtin147)");
+
 const SPEED_VALUES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
 const NOTICE_ID = "manual-video-controller-notice";
 

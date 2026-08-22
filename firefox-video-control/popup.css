@@ -61,3 +61,13 @@ button:hover {
   color: #2563eb;
   font-size: 12px;
 }
+
+.footer-credit {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  color: #94a3b8;
+  font-size: 11px;
+  text-align: center;
+  font-weight: 500;
+}

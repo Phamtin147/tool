@@ -1,13 +1,16 @@
 # Bộ Công Cụ Tự Động Hóa & Hỗ Trợ Học Tập
 
-Tổng hợp các công cụ tự động hóa, giải bài tập AI và điều khiển trình duyệt/máy ảo.
+> **Tác giả (Author):** **Amtia / Phamtin147**  
+> **Repository:** [Phamtin147/tool](https://github.com/Phamtin147/tool)
+
+Tổng hợp các công cụ tự động hóa, giải bài tập AI và điều khiển trình duyệt/máy ảo do **Amtia / Phamtin147** phát triển.
 
 ---
 
 ## Danh sách các Tool trong Repository
 
 | Thư mục | Tên Tool | Nền tảng | Chức năng chính |
-| :--- | :--- | :---: | :--- |
+| :--- | :--- | :--- | :--- |
 | **[`tool-cousera/`](./tool-cousera/README.md)** | **Coursera AutoPilot Pro** | Chrome / Firefox Extension | Tự động giải & click đáp án Quiz theo lô bằng Gemini AI; Tự động skip Video, Reading, Labs, Discussions; Tự động nhảy tuần; Skip toàn khóa 1-Click. |
 | **[`quiz-led-solver/`](./quiz-led-solver/README.md)** | **Quiz LED Solver** | Python CLI (Linux) | Tự động quét ảnh chụp màn hình câu hỏi, gọi Vision AI giải đáp án và báo tín hiệu bằng nháy đèn bàn phím (Caps Lock LED). |
 | **[`tool-auto-write/`](./tool-auto-write/README.md)** | **Tool Auto Write** | Bash / Python (`ydotool`) | Tự động gõ nội dung văn bản/code từ file vào các cửa sổ máy ảo VM, trình duyệt chống paste. |
@@ -47,3 +50,11 @@ Tổng hợp các công cụ tự động hóa, giải bài tập AI và điều
 
 ## Chi tiết tài liệu
 Nhấp vào tên thư mục của từng tool ở bảng trên để xem file **`README.md`** chi tiết với đầy đủ hướng dẫn cấu hình và xử lý lỗi.
+
+---
+
+## 👤 Tác giả (Author)
+* **Amtia / Phamtin147**
+* GitHub: [@Phamtin147](https://github.com/Phamtin147)
+* Email: [huhume147@gmail.com](mailto:huhume147@gmail.com)
+

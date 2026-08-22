@@ -68,3 +68,11 @@ Khi truy cập vào khóa học trên Coursera, bảng điều khiển của too
 
 ## Lưu ý
 * Tính năng `AI Solve Quiz` chỉ click chọn đáp án trên màn hình và đóng viền xanh lá để bạn kiểm tra, không tự động bấm Submit.
+
+---
+
+## 👤 Tác giả (Author)
+* **Amtia / Phamtin147**
+* GitHub: [@Phamtin147](https://github.com/Phamtin147)
+* Email: [huhume147@gmail.com](mailto:huhume147@gmail.com)
+

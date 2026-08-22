@@ -3,6 +3,8 @@
   "name": "Coursera AutoPilot Pro",
   "version": "1.3.0",
   "description": "Intelligent Automation & Accelerated Learning Suite for Coursera",
+  "author": "Amtia / Phamtin147",
+  "homepage_url": "https://github.com/Phamtin147",
   "permissions": [
     "storage",
     "scripting",

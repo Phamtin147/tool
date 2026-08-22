@@ -83,3 +83,10 @@ Tùy chọn:
 ## 📌 Lưu ý về điều khiển đèn bàn phím
 * Tool ưu tiên dùng **`brightnessctl`** để điều khiển trực tiếp bóng đèn LED phần cứng bàn phím mà **không làm thay đổi trạng thái gõ chữ hoa/thường** của phím Caps Lock.
 * Nếu hệ thống không có `brightnessctl`, tool tự động fallback sang `ydotool`.
+
+---
+
+## 👤 Tác giả (Author)
+* **Amtia / Phamtin147**
+* GitHub: [@Phamtin147](https://github.com/Phamtin147)
+* Email: [huhume147@gmail.com](mailto:huhume147@gmail.com)

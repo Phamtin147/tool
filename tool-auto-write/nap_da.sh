@@ -1,4 +1,10 @@
 #!/bin/bash
+# Tool Auto Write - Keystroke Injector
+# Developed by: Amtia / Phamtin147 (https://github.com/Phamtin147)
+
+echo "=========================================================="
+echo "  Tool Auto Write - Developed by Amtia / Phamtin147"
+echo "=========================================================="
 
 export YDOTOOL_SOCKET=/tmp/.ydotool_socket
 FILE_DAP_AN="/home/amtia/tool/tool-auto-write/dapan.txt"

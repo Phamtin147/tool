@@ -1,3 +1,9 @@
+/**
+ * LevelUp Video Control - Popup
+ * 
+ * @author Amtia / Phamtin147 (https://github.com/Phamtin147)
+ */
+
 const statusEl = document.getElementById("status");
 const autoNextEl = document.getElementById("auto-next");
 

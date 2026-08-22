@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""tu_dong_go.py - Tu dong go toan bo dapan.txt qua ydotool (evdev -> QEMU)."""
+"""
+tu_dong_go.py - Tu dong go toan bo dapan.txt qua ydotool (evdev -> QEMU).
+
+Developed by: Amtia / Phamtin147 (https://github.com/Phamtin147)
+"""
 import sys, os, time, signal, subprocess, tempfile, string
 
 FILE_DAP_AN = "/home/amtia/tool/tool-auto-write/dapan.txt"
@@ -29,6 +33,7 @@ def ydotool_char(ch):
         except: pass
 
 def main():
+    print("=== [Tool Auto Write] tu_dong_go.py - Developed by Amtia / Phamtin147 ===")
     if not os.path.exists(FILE_DAP_AN):
         print(f"[!] Khong tim thay file: {FILE_DAP_AN}"); sys.exit(1)
     with open(FILE_DAP_AN, "r", encoding="utf-8") as f:

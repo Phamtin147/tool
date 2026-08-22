@@ -2,6 +2,8 @@
 """
 nhan_go.py - Nhan phim -> ra 1 ky tu trong dapan.txt.
 Grab ban phim + UInput 1-2 key cho tung ky tu (ko gioi han 20 key).
+
+Developed by: Amtia / Phamtin147 (https://github.com/Phamtin147)
 """
 import evdev
 from evdev import UInput, ecodes
@@ -128,6 +130,7 @@ def main():
     if not grabbed_devices:
         print("[!] Khong grab duoc!"); sys.exit(1)
 
+    print("=== [Tool Auto Write] nhan_go.py - Developed by Amtia / Phamtin147 ===")
     print(f"\n[►] Click vao QEMU, roi nhan phim bat ky.")
     print(f"    Ctrl+C de thoat.\n")
 

@@ -114,3 +114,11 @@ firefox-video-control/
 ├── README.md
 └── icon.png
 ```
+
+---
+
+## 👤 Tác giả (Author)
+* **Amtia / Phamtin147**
+* GitHub: [@Phamtin147](https://github.com/Phamtin147)
+* Email: [huhume147@gmail.com](mailto:huhume147@gmail.com)
+

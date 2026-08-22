@@ -1,11 +1,15 @@
-// Coursera AutoPilot Pro - AI Grader Blocker & Interceptor
-// Injected at document_start in MAIN world to intercept network and DOM before page scripts run
+/**
+ * Coursera AutoPilot Pro - AI Grader Blocker & Interceptor
+ * Injected at document_start in MAIN world to intercept network and DOM before page scripts run
+ * 
+ * @author Amtia / Phamtin147 (https://github.com/Phamtin147)
+ */
 
 (() => {
   if (window.__COURSERA_AI_BLOCKER_INSTALLED__) return;
   window.__COURSERA_AI_BLOCKER_INSTALLED__ = true;
 
-  console.log("[Coursera AutoPilot] AI Grader Interceptor active.");
+  console.log("[Coursera AutoPilot Pro] AI Grader Interceptor active (by Amtia / Phamtin147).");
 
   // 1. Inject immediate CSS to hide AI grader elements permanently
   const injectStyle = () => {

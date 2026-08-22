@@ -1,3 +1,9 @@
+/**
+ * LevelUp Video Control - Background Service Worker
+ * 
+ * @author Amtia / Phamtin147 (https://github.com/Phamtin147)
+ */
+
 const DEFAULT_SETTINGS = {
   autoNextOnEnded: false,
   seekSeconds: 10,

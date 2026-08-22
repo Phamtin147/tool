@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """CLI tool: newest screenshot -> Vision AI -> blink Caps Lock answer code.
 
+Developed by: Amtia / Phamtin147 (https://github.com/Phamtin147)
+
 Answer encoding:
 A=1 blink, B=2 blinks, C=3 blinks, D=4 blinks, E=5 blinks, F=6 blinks.
 
@@ -404,7 +406,8 @@ def watch_screenshots(args: argparse.Namespace) -> int:
 
 def main(argv: Iterable[str] | None = None) -> int:
     load_config_env()
-    parser = argparse.ArgumentParser(description="Newest screenshot -> AI answer A-F -> Caps Lock LED signal")
+    print("[Quiz LED Solver] v2.0 - Developed by Amtia / Phamtin147", file=sys.stderr)
+    parser = argparse.ArgumentParser(description="Newest screenshot -> AI answer A-F -> Caps Lock LED signal (by Amtia / Phamtin147)")
     parser.add_argument("--dir", type=Path, default=SCREENSHOT_DIR, help="Screenshot directory")
     parser.add_argument("--image", type=Path, help="Specific image file. Defaults to newest image in --dir")
     parser.add_argument("--provider", choices=["auto", "gemini", "ollama"], default="auto")

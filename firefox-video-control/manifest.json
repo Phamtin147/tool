@@ -3,6 +3,8 @@
   "name": "LevelUp Video Control",
   "version": "1.0.0",
   "description": "Manual video controls for levelup.akajob.io: play/pause, seek, speed control, and optional tab switch after a video really ends.",
+  "author": "Amtia / Phamtin147",
+  "homepage_url": "https://github.com/Phamtin147",
   "permissions": [
     "storage",
     "tabs",
