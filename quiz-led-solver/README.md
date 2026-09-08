@@ -7,7 +7,7 @@ Công cụ tự động giải bài trắc nghiệm từ ảnh chụp màn hình
 ## 🎯 Cơ chế hoạt động
 
 1. **Theo dõi ảnh chụp:** Tự động phát hiện ảnh chụp màn hình mới nhất trong thư mục `~/Pictures/screenshots`.
-2. **AI Vision phân tích:** Gửi ảnh câu hỏi tới **Google Gemini Vision API** (chạy đua song song các model `gemini-2.5-flash`, `gemini-2.0-flash` để lấy kết quả nhanh nhất ~0.5s - 1.2s).
+2. **AI Vision phân tích:** Gửi ảnh câu hỏi tới **Google Gemini Vision API** (chạy đua song song các model `gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3.5-flash` để lấy kết quả nhanh nhất ~0.3s - 0.8s).
 3. **Báo đáp án qua đèn LED:** Nháy đèn Caps Lock trên bàn phím phần cứng theo số lần tương ứng với chữ cái đáp án.
 
 ---

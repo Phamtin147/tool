@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI tool: newest screenshot -> Vision AI (Gemini 2.5 / 2.0 / Ollama) -> blink Caps Lock answer code.
+"""CLI tool: newest screenshot -> Vision AI (Gemini 3.8 / 3.7 / 3.5 / Ollama) -> blink Caps Lock answer code.
 
 Developed by: Amtia / Phamtin147 (https://github.com/Phamtin147)
 
@@ -46,11 +46,16 @@ SYSTEM_INSTRUCTION = (
 PROMPT = "Identify and return ONLY the correct outer choice letter(s) (A-Z) for this quiz question."
 
 DEFAULT_GEMINI_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.5-flash",
+    "gemini-3.8-pro",
+    "gemini-3.7-pro",
+    "gemini-3.5-pro",
+    "gemini-3.5-flash-lite",
+    "gemini-3.0-flash",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
-    "gemini-2.5-pro",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
 ]
 
 
@@ -490,9 +495,9 @@ def watch_screenshots(args: argparse.Namespace) -> int:
 
 def main(argv: Iterable[str] | None = None) -> int:
     load_config_env()
-    print("[Quiz LED Solver] v2.5 - Gemini 2.5/2.0 Vision by Amtia / Phamtin147", file=sys.stderr)
+    print("[Quiz LED Solver] v3.8 - Gemini 3.8/3.7/3.5 Vision by Amtia / Phamtin147", file=sys.stderr)
     parser = argparse.ArgumentParser(
-        description="Newest screenshot -> Gemini 2.5/2.0 Vision AI answer A-F -> Caps Lock LED signal (by Amtia / Phamtin147)"
+        description="Newest screenshot -> Gemini 3.8/3.7/3.5 Vision AI answer A-F -> Caps Lock LED signal (by Amtia / Phamtin147)"
     )
     parser.add_argument("--dir", type=Path, default=SCREENSHOT_DIR, help="Screenshot directory (default: ~/Pictures/screenshots)")
     parser.add_argument("--image", "--file", type=Path, dest="image", help="Specific image file. Defaults to newest image in --dir")
@@ -500,12 +505,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument(
         "--gemini-model",
         action="append",
-        help="Gemini model in fallback/race order. Default: gemini-2.5-flash, gemini-2.0-flash, gemini-2.5-pro, gemini-2.0-flash-lite, gemini-1.5-flash",
+        help="Gemini model in fallback/race order. Default: gemini-3.8-flash, gemini-3.7-flash, gemini-3.5-flash, gemini-3.8-pro, gemini-3.7-pro, gemini-3.5-flash-lite",
     )
     parser.add_argument(
         "--openrouter-model",
-        default=os.environ.get("OPENROUTER_MODEL", "google/gemini-2.5-flash"),
-        help="OpenRouter model (default: google/gemini-2.5-flash)",
+        default=os.environ.get("OPENROUTER_MODEL", "google/gemini-3.8-flash"),
+        help="OpenRouter model (default: google/gemini-3.8-flash)",
     )
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
     parser.add_argument("--timeout", type=float, default=12.0, help="Per-model API timeout in seconds")
@@ -535,11 +540,14 @@ def main(argv: Iterable[str] | None = None) -> int:
         gemini_models = [m.strip() for m in os.environ["GEMINI_MODELS"].split(",") if m.strip()]
     else:
         gemini_models = [
-            os.environ.get("GEMINI_MODEL_1", "gemini-2.5-flash"),
-            os.environ.get("GEMINI_MODEL_2", "gemini-2.0-flash"),
-            os.environ.get("GEMINI_MODEL_3", "gemini-2.5-pro"),
-            os.environ.get("GEMINI_MODEL_4", "gemini-2.0-flash-lite"),
-            os.environ.get("GEMINI_MODEL_5", "gemini-1.5-flash"),
+            os.environ.get("GEMINI_MODEL_1", "gemini-3.8-flash"),
+            os.environ.get("GEMINI_MODEL_2", "gemini-3.7-flash"),
+            os.environ.get("GEMINI_MODEL_3", "gemini-3.5-flash"),
+            os.environ.get("GEMINI_MODEL_4", "gemini-3.8-pro"),
+            os.environ.get("GEMINI_MODEL_5", "gemini-3.7-pro"),
+            os.environ.get("GEMINI_MODEL_6", "gemini-3.5-pro"),
+            os.environ.get("GEMINI_MODEL_7", "gemini-3.5-flash-lite"),
+            os.environ.get("GEMINI_MODEL_8", "gemini-3.0-flash"),
         ]
     args.gemini_models = gemini_models
 
