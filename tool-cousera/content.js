@@ -1003,17 +1003,18 @@ const SkipFullCourse = async (log) => {
   }
 };
 
-// ==========================================
-// GEMINI AI QUIZ SOLVER (1-CLICK BATCH MODE)
-// ==========================================
-
-async function queryGeminiApi(prompt, apiKey, preferredModel = "gemini-3.7-flash") {
+async function queryGeminiApi(prompt, apiKey, preferredModel = "gemini-3.8-flash") {
   const allModels = [
+    "gemini-3.8-flash",
     "gemini-3.7-flash",
-    "gemini-3.6-flash",
     "gemini-3.5-flash",
+    "gemini-3.8-pro",
+    "gemini-3.7-pro",
+    "gemini-3.5-pro",
     "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite"
+    "gemini-3.0-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash"
   ];
 
   let modelsToTry = [];
@@ -1032,7 +1033,10 @@ async function queryGeminiApi(prompt, apiKey, preferredModel = "gemini-3.7-flash
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1 }
+          generationConfig: {
+            temperature: 0.0,
+            maxOutputTokens: 2048
+          }
         })
       });
 
@@ -1043,8 +1047,10 @@ async function queryGeminiApi(prompt, apiKey, preferredModel = "gemini-3.7-flash
       }
 
       const json = await res.json();
-      const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) return text;
+      const parts = json.candidates?.[0]?.content?.parts || [];
+      const nonThoughtParts = parts.filter((p) => !p.thought && p.text);
+      const text = nonThoughtParts.map((p) => p.text).join(" ") || parts.map((p) => p.text || "").join(" ");
+      if (text && text.trim()) return text.trim();
     } catch (err) {
       lastError = err;
     }
@@ -1152,7 +1158,7 @@ const solveQuizWithGemini = async (log) => {
     return;
   }
   apiKey = apiKey.trim();
-  const selectedModel = settings.geminiModel || "gemini-3.7-flash";
+  const selectedModel = settings.geminiModel || "gemini-3.8-flash";
 
   // Find all question containers
   const containerSelectors = [
@@ -1709,7 +1715,7 @@ const Mt = Object.freeze({
 
 
 
-const qt = { theme: "light", geminiApiKey: "", geminiModel: "gemini-3.7-flash" };
+const qt = { theme: "light", geminiApiKey: "", geminiModel: "gemini-3.8-flash" };
 async function zt() {
   return new Promise((t) => {
     chrome.storage.local.get(["settings"], (e) => {
@@ -1933,7 +1939,7 @@ const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) => {
               h(
                 "select",
                 {
-                  value: t.geminiModel || "gemini-3.7-flash",
+                  value: t.geminiModel || "gemini-3.8-flash",
                   onChange: (ev) => e({ ...t, geminiModel: ev.target.value }),
                   className: `w-full rounded border px-2 py-1 text-[10.5px] font-sans outline-none transition-colors ${
                     n.isLight
@@ -1941,11 +1947,14 @@ const Gt = ({ settings: t, setSettings: e, onSave: o, onCopyUA: i, t: n }) => {
                       : "border-stone-700 bg-stone-900 text-stone-100 focus:border-emerald-500"
                   }`,
                   children: [
-                    h("option", { value: "gemini-3.7-flash", children: "Gemini 3.7 Flash (Default)" }),
-                    h("option", { value: "gemini-3.6-flash", children: "Gemini 3.6 Flash" }),
+                    h("option", { value: "gemini-3.8-flash", children: "Gemini 3.8 Flash (Default - Ultra Fast)" }),
+                    h("option", { value: "gemini-3.7-flash", children: "Gemini 3.7 Flash" }),
                     h("option", { value: "gemini-3.5-flash", children: "Gemini 3.5 Flash" }),
+                    h("option", { value: "gemini-3.8-pro", children: "Gemini 3.8 Pro (Deep Reasoning)" }),
+                    h("option", { value: "gemini-3.7-pro", children: "Gemini 3.7 Pro" }),
+                    h("option", { value: "gemini-3.5-pro", children: "Gemini 3.5 Pro" }),
                     h("option", { value: "gemini-3.5-flash-lite", children: "Gemini 3.5 Flash Lite" }),
-                    h("option", { value: "gemini-3.1-flash-lite", children: "Gemini 3.1 Flash Lite" }),
+                    h("option", { value: "gemini-3.0-flash", children: "Gemini 3.0 Flash" }),
                     h("option", { value: "auto", children: "Auto Fallback (Try All)" })
                   ]
                 }
@@ -1990,7 +1999,7 @@ const Vt = () => {
   const [t, e] = P("main"),
     [o, i] = P(!1),
     [n, r] = P(!0),
-    [s, c] = P({ theme: "light", geminiApiKey: "", geminiModel: "gemini-3.7-flash" }),
+    [s, c] = P({ theme: "light", geminiApiKey: "", geminiModel: "gemini-3.8-flash" }),
     { logs: d, latestStatus: l, statusType: p, addLog: a, clearLogs: m } = Ot(),
     u = Ht(s);
   Me(() => {

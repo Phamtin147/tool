@@ -43,7 +43,7 @@ Tiện ích mở rộng (Browser Extension) hỗ trợ tự động hóa học t
 1. Lấy API Key miễn phí tại [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Trên trang Coursera, bấm vào biểu tượng bánh răng (Cài đặt) ở góc trên bảng điều khiển nổi của tool.
 3. Dán API Key vào ô `Gemini API Key`.
-4. Chọn Model mong muốn tại ô `Gemini Model` (mặc định: `Gemini 3.7 Flash`).
+4. Chọn Model mong muốn tại ô `Gemini Model` (mặc định: `Gemini 3.8 Flash`).
 5. Bấm **Save changes**. Key và Model sẽ được lưu vào bộ nhớ trình duyệt.
 
 ---
