@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""CLI tool: newest screenshot -> Vision AI -> blink Caps Lock answer code.
+"""CLI tool: newest screenshot -> Vision AI (Gemini 2.5 / 2.0 / Ollama) -> blink Caps Lock answer code.
 
 Developed by: Amtia / Phamtin147 (https://github.com/Phamtin147)
 
 Answer encoding:
 A=1 blink, B=2 blinks, C=3 blinks, D=4 blinks, E=5 blinks, F=6 blinks.
-
-Requirements:
-- ydotoold running and user-accessible socket for LED/key event signaling
-- optional Gemini API key via GEMINI_API_KEY or GOOGLE_API_KEY
-- optional Ollama server at OLLAMA_HOST or http://127.0.0.1:11434
 """
 
 from __future__ import annotations
@@ -28,34 +23,54 @@ from typing import Iterable
 
 import requests
 
-SCREENSHOT_DIR = Path("/home/amtia/Pictures/screenshots")
-CONFIG_ENV = Path(__file__).resolve().parent / ".config" / "gemini.env"
+SCREENSHOT_DIR = Path.home() / "Pictures" / "screenshots"
+CONFIG_ENV_PATHS = [
+    Path(__file__).resolve().parent / ".config" / "gemini.env",
+    Path.home() / ".config" / "gemini.env",
+    Path.home() / ".config" / "ryoku" / "gemini.env",
+    Path(__file__).resolve().parent / ".env",
+    Path.home() / ".env",
+]
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 ANSWER_RE = re.compile(r"[A-Z]", re.IGNORECASE)
 CAPS_LOCK_KEYCODE = 58
 
-PROMPT = """You are solving a multiple-choice or multiple-select quiz question from a screenshot.
-Carefully identify the OUTER answer choices/labels (e.g. A, B, C, D, E, F...) and determine which outer choice label(s) correspond to the correct option(s).
-Do NOT confuse inner statement letters (e.g. A. Sao Thủy, B. Sao Kim...) with the outer answer choices (e.g. A. D, B. A, C. B...). Always select the OUTER answer choice letter(s) that point to the correct answer.
+SYSTEM_INSTRUCTION = (
+    "You are a precise multiple-choice quiz solver. You will be provided with an image of a quiz question. "
+    "Carefully identify the OUTER answer choices/labels (e.g. A, B, C, D, E, F...) and determine which outer choice label(s) "
+    "correspond to the correct option(s). Do NOT confuse inner statement letters (e.g. A. Statement 1, B. Statement 2...) with the outer answer choices. "
+    "Respond ONLY with the uppercase outer answer choice letter(s) (e.g. 'A', 'B', 'C', 'AC', 'ABD'). "
+    "Sort the letters alphabetically with no spaces, explanations, markdown, or punctuation."
+)
 
-Respond ONLY with the uppercase outer answer choice letter(s) (e.g., A, B, C, D, A B, etc.).
-Sort the letters alphabetically with no spaces, explanations, or punctuation (e.g. "A", "AC", "ABD").
-""".strip()
+PROMPT = "Identify and return ONLY the correct outer choice letter(s) (A-Z) for this quiz question."
+
+DEFAULT_GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+]
 
 
 def load_config_env() -> None:
-    """Load KEY=VALUE lines from .config/gemini.env into os.environ (if not already set)."""
-    if not CONFIG_ENV.exists():
-        return
-    for line in CONFIG_ENV.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    """Load KEY=VALUE lines from known config env paths into os.environ."""
+    for config_path in CONFIG_ENV_PATHS:
+        if not config_path.exists():
             continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip()
-        if key and key not in os.environ:
-            os.environ[key] = value
+        try:
+            for line in config_path.read_text().splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip("'\"")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+        except Exception:
+            pass
 
 
 def newest_image(directory: Path) -> Path:
@@ -74,15 +89,25 @@ def image_to_base64(path: Path) -> str:
 
 
 def parse_answer(text: str) -> str:
-    # Remove common words to prevent matching letters inside words like "AND", "OR", "CHOICE"
-    cleaned_text = re.sub(r"\b(AND|OR|OPTION|OPTIONS|CHOICE|CHOICES|IS|ARE|CORRECT)\b", " ", text, flags=re.IGNORECASE)
+    # Remove common filler words to prevent matching letters inside words like "AND", "OPTION", etc.
+    cleaned_text = re.sub(
+        r"\b(AND|OR|OPTION|OPTIONS|CHOICE|CHOICES|IS|ARE|CORRECT|ANSWER|THE)\b",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
     matches = ANSWER_RE.findall(cleaned_text)
     if not matches:
         matches = ANSWER_RE.findall(text)
     if not matches:
         raise ValueError(f"Could not parse A-Z answer from: {text!r}")
 
-    unique_sorted = sorted(set(letter.upper() for letter in matches))
+    # Restrict to reasonable quiz choices A-F (or A-Z if multiple)
+    valid_letters = [letter.upper() for letter in matches if "A" <= letter.upper() <= "Z"]
+    if not valid_letters:
+        raise ValueError(f"No valid choice letters found in: {text!r}")
+
+    unique_sorted = sorted(set(valid_letters))
     return "".join(unique_sorted)
 
 
@@ -105,6 +130,9 @@ def ask_gemini(path: Path, model: str, timeout: float) -> str:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     params = {"key": api_key}
     payload = {
+        "systemInstruction": {
+            "parts": [{"text": SYSTEM_INSTRUCTION}]
+        },
         "contents": [
             {
                 "role": "user",
@@ -120,8 +148,8 @@ def ask_gemini(path: Path, model: str, timeout: float) -> str:
             }
         ],
         "generationConfig": {
-            "temperature": 0,
-            "maxOutputTokens": 1024,
+            "temperature": 0.0,
+            "maxOutputTokens": 128,
         },
     }
 
@@ -138,7 +166,7 @@ def ask_gemini(path: Path, model: str, timeout: float) -> str:
     except (KeyError, IndexError, TypeError) as exc:
         raise RuntimeError(f"Unexpected Gemini response: {json.dumps(data)[:500]}") from exc
 
-    # Filter for visible text parts, excluding reasoning-only thought parts if present
+    # Filter for visible text parts, excluding reasoning-only thought parts in Gemini 2.5/Thinking models
     text_parts = [
         part.get("text", "")
         for part in parts
@@ -147,9 +175,48 @@ def ask_gemini(path: Path, model: str, timeout: float) -> str:
     if not text_parts:
         text_parts = [part.get("text", "") for part in parts if "text" in part]
 
-    text = "".join(text_parts)
-    if not text.strip():
+    text = "".join(text_parts).strip()
+    if not text:
         raise RuntimeError(f"Empty Gemini response: {json.dumps(data)[:500]}")
+    return parse_answer(text)
+
+
+def ask_openrouter(path: Path, model: str, timeout: float) -> str:
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("Missing OPENROUTER_API_KEY")
+
+    b64_img = image_to_base64(path)
+    mime = mime_type(path)
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/Phamtin147/tool",
+        "X-Title": "Quiz LED Solver",
+    }
+    payload = {
+        "model": model,
+        "temperature": 0.0,
+        "max_tokens": 64,
+        "messages": [
+            {"role": "system", "content": SYSTEM_INSTRUCTION},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": PROMPT},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime};base64,{b64_img}"},
+                    },
+                ],
+            },
+        ],
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    response.raise_for_status()
+    data = response.json()
+    text = data["choices"][0]["message"]["content"]
     return parse_answer(text)
 
 
@@ -157,11 +224,11 @@ def ask_ollama(path: Path, model: str, timeout: float) -> str:
     host = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
     payload = {
         "model": model,
-        "prompt": PROMPT,
+        "prompt": f"{SYSTEM_INSTRUCTION}\n\n{PROMPT}",
         "images": [image_to_base64(path)],
         "stream": False,
         "options": {
-            "temperature": 0,
+            "temperature": 0.0,
             "num_predict": 16,
         },
     }
@@ -176,7 +243,11 @@ def ask_ollama(path: Path, model: str, timeout: float) -> str:
 
 def provider_order(provider: str) -> list[str]:
     if provider == "auto":
-        return ["gemini", "ollama"]
+        order = ["gemini"]
+        if os.environ.get("OPENROUTER_API_KEY"):
+            order.append("openrouter")
+        order.append("ollama")
+        return order
     return [provider]
 
 
@@ -184,6 +255,7 @@ def solve(
     path: Path,
     provider: str,
     gemini_models: list[str],
+    openrouter_model: str,
     ollama_model: str,
     timeout: float,
     race: bool = True,
@@ -214,7 +286,7 @@ def solve(
                             )
                             executor.shutdown(wait=False, cancel_futures=True)
                             return ans, f"gemini:{model}"
-                        except Exception as exc:  # noqa: BLE001 - CLI should show all model failures
+                        except Exception as exc:  # noqa: BLE001
                             errors.append(f"gemini:{model}: {exc}")
                             print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
                 finally:
@@ -224,25 +296,36 @@ def solve(
                     try:
                         print(f"[ai] trying gemini:{model}...", file=sys.stderr)
                         return ask_gemini(path, model, timeout), f"gemini:{model}"
-                    except Exception as exc:  # noqa: BLE001 - CLI should show all model failures
+                    except Exception as exc:  # noqa: BLE001
                         errors.append(f"gemini:{model}: {exc}")
                         print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
             continue
+
+        if name == "openrouter":
+            try:
+                print(f"[ai] trying openrouter:{openrouter_model}...", file=sys.stderr)
+                return ask_openrouter(path, openrouter_model, timeout), f"openrouter:{openrouter_model}"
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"openrouter: {exc}")
+                print(f"[ai] openrouter failed: {exc}", file=sys.stderr)
+            continue
+
         if name == "ollama":
             try:
-                print(f"[ai] trying ollama...", file=sys.stderr)
-                return ask_ollama(path, ollama_model, timeout), "ollama"
-            except Exception as exc:  # noqa: BLE001 - CLI should show all provider failures
+                print(f"[ai] trying ollama:{ollama_model}...", file=sys.stderr)
+                return ask_ollama(path, ollama_model, timeout), f"ollama:{ollama_model}"
+            except Exception as exc:  # noqa: BLE001
                 errors.append(f"ollama: {exc}")
                 print(f"[ai] ollama failed: {exc}", file=sys.stderr)
             continue
+
         raise ValueError(f"Unknown provider: {name}")
 
     raise RuntimeError("All providers failed:\n" + "\n".join(errors))
 
 
 def blink_count(letter: str) -> int:
-    return ord(letter) - ord("A") + 1
+    return ord(letter.upper()) - ord("A") + 1
 
 
 def is_caps_on() -> bool:
@@ -368,6 +451,7 @@ def process_image(image: Path, args: argparse.Namespace) -> bool:
             image,
             args.provider,
             args.gemini_models,
+            args.openrouter_model,
             args.ollama_model,
             args.timeout,
             race=args.race,
@@ -375,7 +459,7 @@ def process_image(image: Path, args: argparse.Namespace) -> bool:
         print(f"[answer] {answer} via {used_provider}")
         blink_caps(answer, args.interval, args.group_interval, args.dry_run, backend=args.led_backend)
         return True
-    except Exception as exc:  # noqa: BLE001 - CLI entry point
+    except Exception as exc:  # noqa: BLE001
         print(f"[error] {exc}", file=sys.stderr)
         return False
 
@@ -406,21 +490,42 @@ def watch_screenshots(args: argparse.Namespace) -> int:
 
 def main(argv: Iterable[str] | None = None) -> int:
     load_config_env()
-    print("[Quiz LED Solver] v2.0 - Developed by Amtia / Phamtin147", file=sys.stderr)
-    parser = argparse.ArgumentParser(description="Newest screenshot -> AI answer A-F -> Caps Lock LED signal (by Amtia / Phamtin147)")
-    parser.add_argument("--dir", type=Path, default=SCREENSHOT_DIR, help="Screenshot directory")
-    parser.add_argument("--image", type=Path, help="Specific image file. Defaults to newest image in --dir")
-    parser.add_argument("--provider", choices=["auto", "gemini", "ollama"], default="auto")
-    parser.add_argument("--gemini-model", action="append", help="Gemini model in fallback order (repeatable). Default: gemini-3.7-flash, gemini-3.5-flash, gemini-3.5-flash-lite")
+    print("[Quiz LED Solver] v2.5 - Gemini 2.5/2.0 Vision by Amtia / Phamtin147", file=sys.stderr)
+    parser = argparse.ArgumentParser(
+        description="Newest screenshot -> Gemini 2.5/2.0 Vision AI answer A-F -> Caps Lock LED signal (by Amtia / Phamtin147)"
+    )
+    parser.add_argument("--dir", type=Path, default=SCREENSHOT_DIR, help="Screenshot directory (default: ~/Pictures/screenshots)")
+    parser.add_argument("--image", "--file", type=Path, dest="image", help="Specific image file. Defaults to newest image in --dir")
+    parser.add_argument("--provider", choices=["auto", "gemini", "openrouter", "ollama"], default="auto")
+    parser.add_argument(
+        "--gemini-model",
+        action="append",
+        help="Gemini model in fallback/race order. Default: gemini-2.5-flash, gemini-2.0-flash, gemini-2.5-pro, gemini-2.0-flash-lite, gemini-1.5-flash",
+    )
+    parser.add_argument(
+        "--openrouter-model",
+        default=os.environ.get("OPENROUTER_MODEL", "google/gemini-2.5-flash"),
+        help="OpenRouter model (default: google/gemini-2.5-flash)",
+    )
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
-    parser.add_argument("--timeout", type=float, default=15.0, help="Per-model API timeout in seconds")
-    parser.add_argument("--interval", type=float, default=0.20, help="Delay between Caps Lock key/LED events")
-    parser.add_argument("--group-interval", type=float, default=1.0, help="Delay between multiple answer letters")
-    parser.add_argument("--led-backend", choices=["auto", "brightnessctl", "ydotool"], default="auto", help="LED signaling backend (default: auto detects brightnessctl hardware LED first, then ydotool)")
-    parser.add_argument("--race", action=argparse.BooleanOptionalAction, default=True, help="Query all Gemini models concurrently and take the fastest result (default: True)")
-    parser.add_argument("--dry-run", action="store_true", help="Do not blink LED")
+    parser.add_argument("--timeout", type=float, default=12.0, help="Per-model API timeout in seconds")
+    parser.add_argument("--interval", "--blink-ms", type=float, default=0.20, help="Delay between Caps Lock key/LED events in seconds")
+    parser.add_argument("--group-interval", "--gap-ms", type=float, default=0.8, help="Delay between multiple answer letters")
+    parser.add_argument(
+        "--led-backend",
+        choices=["auto", "brightnessctl", "ydotool"],
+        default="auto",
+        help="LED signaling backend (default: auto)",
+    )
+    parser.add_argument(
+        "--race",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Query multiple Gemini models concurrently and take the fastest result (default: True)",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Do not blink LED, only output answer")
     parser.add_argument("--watch", action="store_true", help="Watch screenshot folder and solve every new image")
-    parser.add_argument("--poll", type=float, default=0.5, help="Watch polling interval in seconds")
+    parser.add_argument("--poll", "--poll-interval", type=float, default=0.4, help="Watch polling interval in seconds")
     parser.add_argument("--process-existing", action="store_true", help="In watch mode, process current newest image immediately")
     args = parser.parse_args(argv)
 
@@ -430,9 +535,11 @@ def main(argv: Iterable[str] | None = None) -> int:
         gemini_models = [m.strip() for m in os.environ["GEMINI_MODELS"].split(",") if m.strip()]
     else:
         gemini_models = [
-            os.environ.get("GEMINI_MODEL_1", "gemini-3.7-flash"),
-            os.environ.get("GEMINI_MODEL_2", "gemini-3.5-flash"),
-            os.environ.get("GEMINI_MODEL_3", "gemini-3.5-flash-lite"),
+            os.environ.get("GEMINI_MODEL_1", "gemini-2.5-flash"),
+            os.environ.get("GEMINI_MODEL_2", "gemini-2.0-flash"),
+            os.environ.get("GEMINI_MODEL_3", "gemini-2.5-pro"),
+            os.environ.get("GEMINI_MODEL_4", "gemini-2.0-flash-lite"),
+            os.environ.get("GEMINI_MODEL_5", "gemini-1.5-flash"),
         ]
     args.gemini_models = gemini_models
 
