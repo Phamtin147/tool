@@ -46,11 +46,12 @@ SYSTEM_INSTRUCTION = (
 PROMPT = "Identify and return ONLY the correct outer choice letter(s) (A-Z) for this quiz question."
 
 DEFAULT_GEMINI_MODELS = [
+    "gemini-flash-latest",
     "gemini-3.6-flash",
+    "gemini-3.1-flash-lite",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.5-flash",
-    "gemini-3.1-flash-lite",
     "gemini-3.5-flash-lite",
 ]
 
@@ -296,7 +297,11 @@ def solve(
                 for model in gemini_models:
                     try:
                         print(f"[ai] trying gemini:{model}...", file=sys.stderr)
-                        return ask_gemini(path, model, timeout), f"gemini:{model}"
+                        t0 = time.perf_counter()
+                        ans = ask_gemini(path, model, timeout)
+                        dt = time.perf_counter() - t0
+                        print(f"[ai] response from gemini:{model} in {dt:.2f}s -> answer {ans}", file=sys.stderr)
+                        return ans, f"gemini:{model}"
                     except Exception as exc:  # noqa: BLE001
                         errors.append(f"gemini:{model}: {exc}")
                         print(f"[ai] gemini:{model} failed: {exc}", file=sys.stderr)
@@ -549,12 +554,12 @@ def main(argv: Iterable[str] | None = None) -> int:
         gemini_models = [m.strip() for m in os.environ["GEMINI_MODELS"].split(",") if m.strip()]
     else:
         gemini_models = [
-            os.environ.get("GEMINI_MODEL_1", "gemini-3.6-flash"),
-            os.environ.get("GEMINI_MODEL_2", "gemini-3.8-flash"),
-            os.environ.get("GEMINI_MODEL_3", "gemini-3.7-flash"),
-            os.environ.get("GEMINI_MODEL_4", "gemini-3.5-flash"),
-            os.environ.get("GEMINI_MODEL_5", "gemini-3.1-flash-lite"),
-            os.environ.get("GEMINI_MODEL_6", "gemini-3.5-flash-lite"),
+            os.environ.get("GEMINI_MODEL_1", "gemini-flash-latest"),
+            os.environ.get("GEMINI_MODEL_2", "gemini-3.6-flash"),
+            os.environ.get("GEMINI_MODEL_3", "gemini-3.1-flash-lite"),
+            os.environ.get("GEMINI_MODEL_4", "gemini-3.8-flash"),
+            os.environ.get("GEMINI_MODEL_5", "gemini-3.7-flash"),
+            os.environ.get("GEMINI_MODEL_6", "gemini-3.5-flash"),
         ]
     args.gemini_models = gemini_models
 
