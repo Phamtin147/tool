@@ -46,16 +46,12 @@ SYSTEM_INSTRUCTION = (
 PROMPT = "Identify and return ONLY the correct outer choice letter(s) (A-Z) for this quiz question."
 
 DEFAULT_GEMINI_MODELS = [
+    "gemini-3.6-flash",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.5-flash",
-    "gemini-3.8-pro",
-    "gemini-3.7-pro",
-    "gemini-3.5-pro",
+    "gemini-3.1-flash-lite",
     "gemini-3.5-flash-lite",
-    "gemini-3.0-flash",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
 ]
 
 
@@ -72,7 +68,7 @@ def load_config_env() -> None:
                 key, _, value = line.partition("=")
                 key = key.strip()
                 value = value.strip().strip("'\"")
-                if key and key not in os.environ:
+                if key:
                     os.environ[key] = value
         except Exception:
             pass
@@ -450,6 +446,7 @@ def wait_for_stable_file(path: Path, checks: int = 2, delay: float = 0.1) -> Non
 
 def process_image(image: Path, args: argparse.Namespace) -> bool:
     try:
+        load_config_env()
         wait_for_stable_file(image)
         print(f"[image] {image}", file=sys.stderr)
         answer, used_provider = solve(
@@ -514,8 +511,20 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
     parser.add_argument("--ollama-model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5vl:7b"))
     parser.add_argument("--timeout", type=float, default=12.0, help="Per-model API timeout in seconds")
-    parser.add_argument("--interval", "--blink-ms", type=float, default=0.20, help="Delay between Caps Lock key/LED events in seconds")
-    parser.add_argument("--group-interval", "--gap-ms", type=float, default=0.8, help="Delay between multiple answer letters")
+    parser.add_argument(
+        "--interval",
+        "--blink-ms",
+        type=float,
+        default=float(os.environ.get("BLINK_INTERVAL", "0.35")),
+        help="Delay between Caps Lock key/LED events in seconds (default: 0.35s)",
+    )
+    parser.add_argument(
+        "--group-interval",
+        "--gap-ms",
+        type=float,
+        default=float(os.environ.get("GROUP_INTERVAL", "1.0")),
+        help="Delay between multiple answer letters in seconds (default: 1.0s)",
+    )
     parser.add_argument(
         "--led-backend",
         choices=["auto", "brightnessctl", "ydotool"],
@@ -540,14 +549,12 @@ def main(argv: Iterable[str] | None = None) -> int:
         gemini_models = [m.strip() for m in os.environ["GEMINI_MODELS"].split(",") if m.strip()]
     else:
         gemini_models = [
-            os.environ.get("GEMINI_MODEL_1", "gemini-3.8-flash"),
-            os.environ.get("GEMINI_MODEL_2", "gemini-3.7-flash"),
-            os.environ.get("GEMINI_MODEL_3", "gemini-3.5-flash"),
-            os.environ.get("GEMINI_MODEL_4", "gemini-3.8-pro"),
-            os.environ.get("GEMINI_MODEL_5", "gemini-3.7-pro"),
-            os.environ.get("GEMINI_MODEL_6", "gemini-3.5-pro"),
-            os.environ.get("GEMINI_MODEL_7", "gemini-3.5-flash-lite"),
-            os.environ.get("GEMINI_MODEL_8", "gemini-3.0-flash"),
+            os.environ.get("GEMINI_MODEL_1", "gemini-3.6-flash"),
+            os.environ.get("GEMINI_MODEL_2", "gemini-3.8-flash"),
+            os.environ.get("GEMINI_MODEL_3", "gemini-3.7-flash"),
+            os.environ.get("GEMINI_MODEL_4", "gemini-3.5-flash"),
+            os.environ.get("GEMINI_MODEL_5", "gemini-3.1-flash-lite"),
+            os.environ.get("GEMINI_MODEL_6", "gemini-3.5-flash-lite"),
         ]
     args.gemini_models = gemini_models
 
