@@ -1,0 +1,4 @@
+# Voice Interview Whisper Dependencies
+# Standard Library only (urllib, json, subprocess, tempfile, pathlib).
+# Zero external packages are required!
+# Audio processing is handled natively by Gemini Multimodal Audio API.

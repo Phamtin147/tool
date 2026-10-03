@@ -1,0 +1,8 @@
+# Human-Like Keystroke Simulator Dependencies
+# Native OS driver included:
+# - macOS: uses native osascript (Built-in)
+# - Linux: uses ydotool or xdotool (System packages)
+# - Windows: uses ctypes Win32 API (Built-in)
+
+# Optional unified cross-platform engine:
+# pynput>=1.7.6

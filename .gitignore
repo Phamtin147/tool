@@ -1,6 +1,9 @@
 # Secrets
 **/.config/gemini.env
+**/.config/*.env
 **/gemini.env
+**/*.env
+*.env
 *.key
 *.pem
 

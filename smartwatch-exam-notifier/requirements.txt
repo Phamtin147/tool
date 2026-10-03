@@ -1,0 +1,3 @@
+# Smartwatch Exam Notifier Dependencies
+# Standard Library only (urllib, json, subprocess, tempfile, pathlib).
+# Zero external packages are required!

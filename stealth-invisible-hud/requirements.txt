@@ -1,0 +1,6 @@
+# Stealth Invisible HUD Dependencies
+# Core script uses Python 3 standard library (tkinter, urllib, ctypes, subprocess).
+# Zero external packages are strictly required.
+
+# Optional enhancements:
+# pillow>=9.0.0
