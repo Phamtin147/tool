@@ -10,6 +10,8 @@ export YDOTOOL_SOCKET=/tmp/.ydotool_socket
 FILE_DAP_AN="/home/amtia/tool/tool-auto-write/dapan.txt"
 SLEEP_TIME=5
 
+trap "echo -e '\n\n[!] Đã hủy thao tác gõ (Ctrl+C). Thoát an toàn.'; exit 0" INT TERM
+
 if [ ! -f "$FILE_DAP_AN" ]; then
     echo "Lỗi: File $FILE_DAP_AN không tồn tại!"
     exit 1

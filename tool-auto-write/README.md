@@ -64,8 +64,13 @@ cd /home/amtia/tool/tool-auto-write
 
 ## Các script Python bổ trợ (Tùy chọn)
 
-* **`python3 auto_go.py`**: Tự động gõ với độ trễ từng ký tự có thể tùy chỉnh trong file code.
-* **`python3 nhan_go.py`**: Lắng nghe phím tắt kích hoạt tự động gõ (bấm phím nóng để kích hoạt).
+* **`python3 nhan_go.py [file_dapan]` (Khuyên dùng - Siêu chân thực)**:
+  - Nhấn phím bừa bất kỳ trên bàn phím để xuất ra từng ký tự trong file đáp án (tàng hình 100% trước camera & giám thị).
+  - Phím **`[F12]`** (hoặc `Pause/Break`): Tạm dừng / Tiếp tục gõ (nhả bàn phím dùng máy bình thường).
+  - Phím **`[F10]`** hoặc **`[Ctrl + C]`**: Thoát khẩn cấp ngay lập tức.
+  - Phím **`[Backspace]`**: Lùi lại 1 ký tự và xóa chữ trên màn hình.
+  - Tự động chuẩn hóa Unicode / Tiếng Việt không văng lỗi.
+* **`python3 auto_go.py`**: Tự động gõ với độ trễ từng ký tự qua `ydotool`.
 * **`python3 tu_dong_go.py`**: Chế độ gõ lặp lại tự động.
 
 ---

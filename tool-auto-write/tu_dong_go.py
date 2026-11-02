@@ -14,7 +14,7 @@ DELAY_BETWEEN_CHARS = 0.02
 CHARS = set(string.printable) | {"\n", "\t"}
 
 def cleanup(sig=None, frame=None):
-    print("\n[!] Thoat.")
+    print("\n\n[!] Đã dừng gõ phím ngay lập tức (Ctrl+C). Thoát an toàn.")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, cleanup)
@@ -70,4 +70,7 @@ def main():
     print(f"\n[✓] Hoan thanh! Da go {total} ky tu.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        cleanup()

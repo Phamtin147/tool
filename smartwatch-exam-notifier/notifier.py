@@ -13,6 +13,7 @@ import base64
 import json
 import os
 import platform
+import signal
 import subprocess
 import sys
 import tempfile
@@ -281,5 +282,17 @@ def main() -> None:
                 snip_file.unlink(missing_ok=True)
 
 
+def sigint_handler(sig=None, frame=None):
+    print("\n\n[!] Đã nhận tín hiệu dừng (Ctrl+C). Thoát an toàn.", file=sys.stderr)
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGTERM, sigint_handler)
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sigint_handler()

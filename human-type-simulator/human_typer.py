@@ -15,11 +15,19 @@ import argparse
 import os
 import platform
 import random
+import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import List
+
+def sigint_handler(sig=None, frame=None):
+    print("\n\n[!] Gõ phím đã bị dừng ngay lập tức bởi người dùng (Ctrl+C). Thoát an toàn.", file=sys.stderr)
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGTERM, sigint_handler)
 
 # Adjacent keys on standard US QWERTY layout
 QWERTY_NEIGHBORS = {
@@ -239,7 +247,7 @@ def main() -> None:
     parser.add_argument("-f", "--file", type=Path, help="Path to text or code file to type")
     parser.add_argument("-t", "--text", type=str, help="Direct text string to type")
     parser.add_argument("--wpm", type=int, default=65, help="Typing speed in Words Per Minute (default: 65)")
-    parser.add_argument("--typo-rate", type=float, default=0.025, help="Chance of typing error (default: 0.025 = 2.5%)")
+    parser.add_argument("--typo-rate", type=float, default=0.025, help="Chance of typing error (default: 0.025 = 2.5%%)")
     parser.add_argument("--no-typo", action="store_true", help="Disable intentional typo simulation")
     parser.add_argument("--countdown", type=int, default=5, help="Countdown seconds before start (default: 5)")
     args = parser.parse_args()
@@ -262,13 +270,16 @@ def main() -> None:
             print("[!] Please provide --file <path> or --text <string>", file=sys.stderr)
             sys.exit(1)
 
-    countdown(args.countdown)
-    simulate_human_typing(
-        text=content,
-        target_wpm=args.wpm,
-        typo_rate=args.typo_rate,
-        enable_typos=not args.no_typo
-    )
+    try:
+        countdown(args.countdown)
+        simulate_human_typing(
+            text=content,
+            target_wpm=args.wpm,
+            typo_rate=args.typo_rate,
+            enable_typos=not args.no_typo
+        )
+    except KeyboardInterrupt:
+        sigint_handler()
 
 
 if __name__ == "__main__":

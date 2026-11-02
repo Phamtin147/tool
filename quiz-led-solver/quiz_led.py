@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -749,8 +750,26 @@ def main(argv: Iterable[str] | None = None) -> int:
             print("\n[watch] stopped", file=sys.stderr)
             return 0
 
-    image = args.image or newest_image(args.dir)
-    return 0 if process_image(image, args) else 1
+    try:
+        image = args.image or newest_image(args.dir)
+        return 0 if process_image(image, args) else 1
+    except KeyboardInterrupt:
+        ensure_caps_off(find_capslock_leds())
+        print("\n[!] Dừng tiến trình bởi người dùng (Ctrl+C). Đã tắt đèn LED an toàn.", file=sys.stderr)
+        return 0
+
+
+def _sigint_handler(sig=None, frame=None):
+    try:
+        ensure_caps_off(find_capslock_leds())
+    except Exception:
+        pass
+    print("\n[!] Đã nhận tín hiệu dừng (Ctrl+C). Đã tắt đèn LED an toàn.", file=sys.stderr)
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, _sigint_handler)
+signal.signal(signal.SIGTERM, _sigint_handler)
 
 
 if __name__ == "__main__":
